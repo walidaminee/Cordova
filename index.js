@@ -3,22 +3,19 @@ console.log("Il server sta partendo... Checkpoint 0: Inizio File");
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000; // Usa process.env.PORT come discusso
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 console.log("Checkpoint 1: Moduli richiesti caricati");
 
 // --- CONFIGURAZIONE DEI MAZZI ---
-// Mazzo per il gioco della Bugia! (carte in mano ai giocatori)
 const LIAR_DECK_CONFIG = [
     ...Array(6).fill('Re'), ...Array(6).fill('Regina'), ...Array(6).fill('Asso'),
     ...Array(2).fill('Jolly')
 ];
-// Mazzo per il tipo di tavolo (la carta "obiettivo" del round)
 const TABLE_DECK_CONFIG = ['Re', 'Regina', 'Asso'];
-// Mazzo per la Roulette Russa
-const REVOLVER_DECK_CONFIG = ['Letale', ...Array(5).fill('A Salve')]; // 1 letale, 5 a salve
+const REVOLVER_DECK_CONFIG = ['Letale', ...Array(5).fill('A Salve')];
 console.log("Checkpoint 2: Configurazioni mazzi definite");
 
 // --- Middleware ---
@@ -39,11 +36,11 @@ const MSG = {
 console.log("Checkpoint 4: Costanti MSG definite");
 
 // --- Stato In-Memory ---
-let lobbies = {}; // Struttura: { lobbyCode: { ownerSocketId, players: [], status, playerSockets: {}, gameState: {} } }
-let socketToLobbyMap = {}; // Mappa { socketId: { lobbyCode, playerName } }
+let lobbies = {};
+let socketToLobbyMap = {};
 console.log("Checkpoint 5: Stato in-memory inizializzato");
 
-// --- Funzioni di Gioco ---
+// --- Funzioni di Gioco (restano invariate) ---
 function createDeck() { 
     return [...LIAR_DECK_CONFIG];
 }
@@ -56,32 +53,26 @@ function shuffleDeck(deck) {
     return deck;
 }
 
-/**
- * Invia l'aggiornamento dello stato del gioco a tutti i giocatori della lobby.
- * Ogni giocatore riceve uno stato personalizzato (mano visibile solo a se stesso).
- * @param {object} lobby - L'oggetto lobby con il gameState aggiornato.
- */
 function sendGameStateUpdate(lobby) {
-    // Aggiunto un controllo sulla validità della lobby e del gameState
-    if (!lobby || !lobby.gameState || !lobby.gameState.players) {
+    if (!lobby || !lobby.gameState || !lobby.gameState.players) { 
         console.error(`[ERROR sendGameStateUpdate] Lobby o gameState non validi. Lobby Code: ${lobby ? (lobby.gameState ? lobby.gameState.lobbyCode : 'N/A') : 'N/A'}`);
-        return;
+        return; 
     }
     const { gameState } = lobby;
     gameState.players.forEach(p_loop => {
-        if (p_loop.socketId) { // Invia solo ai giocatori con un socket ID attivo
+        if (p_loop.socketId) {
             const personalizedState = {
                 players: gameState.players.map(pl => ({
                     name: pl.name, 
                     cardCount: pl.hand ? pl.hand.length : 0, 
                     revolverCardCount: pl.revolverDeck ? pl.revolverDeck.length : 0,
                     isEliminated: pl.isEliminated, 
-                    isTurn: pl.isTurn // Indica a chi è il turno
+                    isTurn: pl.isTurn
                 })),
                 myHand: p_loop.isEliminated ? [] : (p_loop.hand || []), 
                 tableType: gameState.tableType,
                 discardPile: gameState.discardPile || [],
-                isMyTurn: p_loop.isTurn, // Indica al client specifico se è il suo turno
+                isMyTurn: p_loop.isTurn,
                 roundNumber: gameState.roundNumber,
                 lastPlay: gameState.lastPlay, 
                 challenge: gameState.challenge,
@@ -94,16 +85,12 @@ function sendGameStateUpdate(lobby) {
     });
 }
 
-/**
- * Avvia un nuovo round del gioco, distribuendo carte e impostando il tipo di tavolo.
- * @param {object} lobby - L'oggetto lobby.
- */
 function startNewRound(lobby) {
     console.log("[DEBUG startNewRound] Inizio funzione startNewRound");
-    if (!lobby || !lobby.gameState) {
+    if (!lobby || !lobby.gameState) { 
         const lobbyCodeForError = lobby ? (lobby.gameState ? lobby.gameState.lobbyCode : 'LOBBY_CODE_NON_TROVATO_IN_GAMESTATE') : 'LOBBY_NON_ESISTENTE';
         console.error(`[ERROR] Tentativo di startNewRound su lobby non valida o senza gameState: ${lobbyCodeForError}`);
-        return;
+        return; 
     }
 
     lobby.gameState.roundNumber = (lobby.gameState.roundNumber || 0) + 1;
@@ -111,20 +98,19 @@ function startNewRound(lobby) {
     console.log(`[GAME] Inizio Round ${lobby.gameState.roundNumber} per la lobby ${lobbyCodeForLog}`);
 
     let newTableDeck = shuffleDeck([...TABLE_DECK_CONFIG]);
-    lobby.gameState.tableType = newTableDeck.pop(); // Una carta casuale per il tipo del tavolo
+    lobby.gameState.tableType = newTableDeck.pop();
     console.log(`[GAME] Tipo del Tavolo per il round ${lobby.gameState.roundNumber} in ${lobbyCodeForLog}: ${lobby.gameState.tableType}`);
 
-    lobby.gameState.liarDeck = shuffleDeck(createDeck()); // Ricrea e rimescola il mazzo delle bugie
-    lobby.gameState.discardPile = []; // Pulisci la pila degli scarti
-    lobby.gameState.lastPlay = null; // Resetta l'ultima giocata
-    lobby.gameState.challenge = null; // Resetta la sfida
-    lobby.gameState.rouletteOutcome = null; // Resetta anche l'esito della roulette all'inizio di un nuovo round
+    lobby.gameState.liarDeck = shuffleDeck(createDeck());
+    lobby.gameState.discardPile = [];
+    lobby.gameState.lastPlay = null;
+    lobby.gameState.challenge = null;
+    lobby.gameState.rouletteOutcome = null;
 
-    // Distribuisci le carte solo ai giocatori NON eliminati
     lobby.gameState.players.forEach(player => {
-        player.hand = []; // Resetta la mano di ogni giocatore
+        player.hand = [];
         if (!player.isEliminated) {
-            for (let i = 0; i < 5; i++) { // Ogni giocatore riceve 5 carte
+            for (let i = 0; i < 5; i++) {
                 if (lobby.gameState.liarDeck.length > 0) {
                     player.hand.push(lobby.gameState.liarDeck.pop());
                 } else {
@@ -135,11 +121,7 @@ function startNewRound(lobby) {
         }
     });
 
-    // Determina il giocatore di turno, saltando gli eliminati
-    // Se il turno è già stato impostato (es. dopo una roulette), usa quello. Altrimenti, inizia da 0.
     let initialTurnIndex = lobby.gameState.turnIndex !== undefined ? lobby.gameState.turnIndex : 0; 
-    
-    // Assicurati che l'indice di partenza sia un giocatore attivo
     let safetyBreak = 0; 
     const totalPlayers = lobby.gameState.players.length;
     while (safetyBreak < totalPlayers && 
@@ -153,11 +135,10 @@ function startNewRound(lobby) {
     if (activePlayersCount === 0) {
         console.log(`[GAME] Tutti i giocatori sono eliminati o assenti in ${lobbyCodeForLog} (startNewRound). Impossibile iniziare il turno.`);
         io.to(lobbyCodeForLog).emit('game-over', { winner: null, reason: 'Tutti i giocatori eliminati o assenti.' });
-        if(lobbies[lobbyCodeForLog]) delete lobbies[lobbyCodeForLog]; // Rimuovi la lobby se tutti eliminati
+        if(lobbies[lobbyCodeForLog]) delete lobbies[lobbyCodeForLog];
         return; 
     }
     
-    // Se safetyBreak ha ciclato tutti i giocatori senza trovare un attivo, significa che c'è un problema.
     if (safetyBreak >= totalPlayers) {
         console.error(`[ERROR] Impossibile trovare un giocatore attivo per iniziare il round in ${lobbyCodeForLog}.`);
         io.to(lobbyCodeForLog).emit('game-over', { winner: null, reason: 'Errore interno: impossibile determinare il prossimo turno.' });
@@ -180,14 +161,13 @@ function startNewRound(lobby) {
         return;
     }
     
-    sendGameStateUpdate(lobby); // Invia lo stato aggiornato a tutti i client
+    sendGameStateUpdate(lobby);
     console.log("[DEBUG startNewRound] Fine funzione startNewRound");
 }
 console.log("Checkpoint 6: Funzioni di gioco definite");
 
 // --- API REST ---
 app.post('/log/apertura-gioco', (req, res) => {
-    // Questo endpoint può essere usato per loggare aperture di pagina client-side
     console.log(`[DEBUG] Un utente ha aperto il gioco alle ${new Date().toLocaleString()}`);
     res.sendStatus(200);
 });
@@ -200,10 +180,10 @@ app.post('/crea-lobby', (req, res) => {
         if (lobbies[codice]) return res.status(409).json({ success: false, error: 'Codice lobby già esistente' });
         
         lobbies[codice] = {
-            ownerSocketId: null, // Sarà impostato dal primo socket che si unisce
+            ownerSocketId: null,
             players: [player], 
-            status: 'waiting', // 'waiting' o 'in-game'
-            playerSockets: {} // Mappa { playerName: socketId } per i giocatori nella lobby
+            status: 'waiting',
+            playerSockets: {}
         };
         console.log(`[LOBBY] Lobby creata: ${codice} da ${player}`);
         res.status(201).json({ success: true, players: lobbies[codice].players });
@@ -216,9 +196,9 @@ app.post('/chiudi-lobby', (req, res) => {
         const lobby = lobbies[codice];
         if (lobby) {
             console.log(`[LOBBY] Chiusura forzata lobby ${codice}.`);
-            io.to(codice).emit('lobby-closed'); // Notifica tutti i client nella stanza
-            delete lobbies[codice]; // Rimuovi la lobby dallo stato in-memory
-            io.socketsLeave(codice); // Rimuovi tutti i socket dalla stanza
+            io.to(codice).emit('lobby-closed');
+            delete lobbies[codice];
+            io.socketsLeave(codice);
             res.json({ success: true });
         } else { res.status(404).json({ success: false, error: MSG.LOBBY_NOT_FOUND }); }
     } catch (error) { console.error(`[ERROR] Errore in /chiudi-lobby:`, error.stack); res.status(500).json({ success: false, error: 'Errore interno del server' }); }
@@ -269,14 +249,14 @@ app.post('/lascia-lobby', (req, res) => {
                 io.to(codice).emit('lobby-closed'); 
                 delete lobbies[codice];
             } else { 
-                if (lobby.ownerSocketId === null || !Object.values(lobby.playerSockets).includes(lobby.ownerSocketId)) { // Correzione: Controlla se il vecchio ownerSocketId è ancora valido
+                if (lobby.ownerSocketId === null || !Object.values(lobby.playerSockets).includes(lobby.ownerSocketId)) {
                     if (lobby.players.length > 0) {
-                        const newOwnerName = lobby.players[0]; // Il primo giocatore rimanente diventa owner
+                        const newOwnerName = lobby.players[0];
                         lobby.ownerSocketId = lobby.playerSockets[newOwnerName] || null;
                         console.log(`[LOBBY] Nuovo proprietario per ${codice}: ${newOwnerName} (${lobby.ownerSocketId}).`);
                     }
                 }
-                io.to(codice).emit('update-players', lobby.players); 
+                io.to(codice).emit('update-players', lobby.players);
             }
             res.json({ success: true });
         } else { res.status(404).json({ success: false, error: 'Giocatore non trovato nella lobby' }); }
@@ -373,9 +353,8 @@ io.on('connection', (socket) => {
             lobby.playerSockets[player] = socket.id; 
             socketToLobbyMap[socket.id] = { lobbyCode: codice, playerName: player }; 
             
-            // Re-assegna owner se il vecchio owner si è disconnesso o se sono il primo in assoluto
             if (lobby.ownerSocketId === null || !Object.values(lobby.playerSockets).includes(lobby.ownerSocketId)) {
-                if (lobby.players && lobby.players[0] === player) { // Solo il primo giocatore della lista può diventare owner
+                if (lobby.players && lobby.players[0] === player) {
                     lobby.ownerSocketId = socket.id; 
                     console.log(`[LOBBY] Proprietario ${player} (${socket.id}) registrato per lobby ${codice}.`); 
                 }
@@ -395,7 +374,7 @@ io.on('connection', (socket) => {
             }
             const playerInGame = lobby.gameState.players.find(p => p.name === playerName);
             if (playerInGame) { 
-                playerInGame.socketId = socket.id; // Associa il socket ID corrente al giocatore nel gameState
+                playerInGame.socketId = socket.id;
                 console.log(`[GAME] Socket ID aggiornato per ${playerName} (${socket.id}) in lobby ${lobbyCode}`); 
             } else { 
                 console.error(`[ERRORE] Giocatore ${playerName} non trovato nel gameState della lobby ${lobbyCode} (player-ready).`); 
@@ -417,7 +396,6 @@ io.on('connection', (socket) => {
         } catch (error) { console.error(`[ERROR] in 'player-ready-in-game':`, error.stack); }
     });
 
-    // Modificato l'evento per accettare un array di carte
     socket.on('play-cards', ({ lobbyCode, cards }) => { 
         try {
             const lobby = lobbies[lobbyCode];
@@ -441,26 +419,24 @@ io.on('connection', (socket) => {
                 return;
             }
 
-            // Verifica che il giocatore abbia tutte le carte nella mano
-            const playerHandCopy = [...player.hand]; // Copia per manipolazione sicura
+            const playerHandCopy = [...player.hand];
             for (const cardToPlay of cards) {
                 const index = playerHandCopy.indexOf(cardToPlay);
                 if (index === -1) {
                     console.log(`[GAME] Mossa non valida: ${player.name} non ha la carta ${cardToPlay} tra quelle selezionate. Mano: ${player.hand}`); 
-                    socket.emit('error-message', `Non hai la carta ${cardToPlay} nella tua mano.`); // Feedback al client
+                    socket.emit('error-message', `Non hai la carta ${cardToPlay} nella tua mano.`);
                     return; 
                 }
-                playerHandCopy.splice(index, 1); // Rimuovi la carta dalla copia
+                playerHandCopy.splice(index, 1);
             }
             
-            // Se tutte le verifiche passano, aggiorna la mano del giocatore
             player.hand = playerHandCopy;
             
             const implicitDeclaredValue = gameState.tableType; 
 
             console.log(`[GAME] ${player.name} ha giocato [${cards.join(', ')}] (dichiarato come ${implicitDeclaredValue}) dalla lobby ${lobbyCode}`);
             if(!gameState.discardPile) gameState.discardPile = [];
-            gameState.discardPile.push(...cards); // Aggiunge tutte le carte giocate alla pila degli scarti
+            gameState.discardPile.push(...cards);
 
             gameState.lastPlay = { playedBy: player.name, actualCards: cards, declaredValue: implicitDeclaredValue };
             
@@ -468,12 +444,10 @@ io.on('connection', (socket) => {
                 console.log(`[GAME] Giocatore ${player.name} ha vinto il round in ${lobbyCode}!`); 
                 io.to(lobbyCode).emit('round-over', { winner: player.name, message: `${player.name} ha finito le carte!` }); 
                 
-                // Imposta il turno per il giocatore che ha finito le carte per il prossimo round
-                gameState.players.forEach((p,idx) => p.isTurn = false); // Resetta tutti i turni
-                gameState.turnIndex = currentPlayerTurnIndex; // Chi finisce le carte inizia il prossimo round
+                gameState.players.forEach((p,idx) => p.isTurn = false);
+                gameState.turnIndex = currentPlayerTurnIndex;
                 gameState.players[gameState.turnIndex].isTurn = true;
 
-                // Avvia il nuovo round dopo un breve ritardo per le animazioni/messaggi
                 setTimeout(() => startNewRound(lobby), 4000); 
                 return; 
             }
@@ -513,8 +487,6 @@ io.on('connection', (socket) => {
 
             const callingPlayer = gameState.players.find(p => p.socketId === socket.id);
 
-            // Verifica che sia il turno del giocatore che chiama BUGIA (quindi può agire)
-            // E che non stia chiamando su se stesso
             if (!callingPlayer || !callingPlayer.isTurn) { 
                 console.log(`[GAME] ${callingPlayer ? callingPlayer.name : 'Socket sconosciuto'} (${socket.id}) ha provato a chiamare BUGIA! fuori turno o non valido.`); 
                 return; 
@@ -537,8 +509,6 @@ io.on('connection', (socket) => {
             const declaredValue = gameState.lastPlay.declaredValue; 
             let isLie = false;
 
-            // Verifica se una qualsiasi delle carte rivelate NON corrisponde al valore dichiarato
-            // (e non è un Jolly).
             for (const card of revealedCards) {
                 if (card !== 'Jolly' && card !== declaredValue) { 
                     isLie = true; 
@@ -579,7 +549,6 @@ io.on('connection', (socket) => {
             const playerPlayingRRName = gameState.challenge.playerFacingRR;
             const sendingPlayer = gameState.players.find(p => p.socketId === socket.id);
 
-            // Solo il giocatore designato per la Roulette Russa può premere SPARA!
             if (!sendingPlayer || sendingPlayer.name !== playerPlayingRRName) {
                 console.log(`[GAME RR] ${sendingPlayer ? sendingPlayer.name : 'Socket sconosciuto'} (${socket.id}) ha provato a giocare la roulette per ${playerPlayingRRName}, ma non era designato.`);
                 return; 
@@ -597,7 +566,7 @@ io.on('connection', (socket) => {
                 drawnRevolverCard = 'Già Eliminato'; 
             } else if (!playerObject.revolverDeck || playerObject.revolverDeck.length === 0) {
                 console.error(`[ERROR RR] Mazzo revolver vuoto o mancante per ${playerPlayingRRName}. Ricaricamento per prevenire blocco.`);
-                playerObject.revolverDeck = shuffleDeck([...REVOLVER_DECK_CONFIG]); // Ricarica il mazzo
+                playerObject.revolverDeck = shuffleDeck([...REVOLVER_DECK_CONFIG]);
                 drawnRevolverCard = playerObject.revolverDeck.pop(); 
                 if (drawnRevolverCard === 'Letale') { 
                     playerObject.isEliminated = true;
@@ -617,11 +586,9 @@ io.on('connection', (socket) => {
             }
 
             gameState.rouletteOutcome = { player: playerPlayingRRName, card: drawnRevolverCard }; 
-            sendGameStateUpdate(lobby); // Invia l'esito della roulette A TUTTI i client
+            sendGameStateUpdate(lobby);
 
-            // Aspetta un momento per permettere al client di visualizzare l'esito della roulette
             setTimeout(() => {
-                // Controlla SE LA PARTITA È FINITA ORA (dopo l'eventuale eliminazione della roulette)
                 const activePlayers = gameState.players.filter(p => !p.isEliminated);
                 if (activePlayers.length <= 1) {
                     const winner = activePlayers.length === 1 ? activePlayers[0].name : null;
@@ -631,28 +598,25 @@ io.on('connection', (socket) => {
                     return; 
                 }
 
-                // ===== DETERMINAZIONE DEL PROSSIMO GIOCATORE DI TURNO PER IL NUOVO ROUND =====
                 let playerForNextRoundStart;
                 const accusedPlayer = gameState.players.find(p => p.name === gameState.challenge.accusedPlayer);
                 const callingPlayer = gameState.players.find(p => p.name === gameState.challenge.callingPlayer);
                 const wasLie = gameState.challenge.isLie; 
                 
-                if (wasLie) { // Se era una bugia (chiamata corretta), il bugiardo inizia il nuovo round
+                if (wasLie) {
                     playerForNextRoundStart = accusedPlayer.name;
                     console.log(`[GAME RR] Bugia! confermata. Il prossimo round inizia con: ${playerForNextRoundStart}`);
-                } else { // Se NON era una bugia (chiamata errata), chi ha chiamato sbagliano inizia il nuovo round
+                } else {
                     playerForNextRoundStart = callingPlayer.name;
                     console.log(`[GAME RR] Bugia! smentita. Il prossimo round inizia con: ${playerForNextRoundStart}`);
                 }
 
-                // Reset lo stato della sfida e dell'ultima giocata, e l'esito della roulette
                 gameState.challenge = null;
                 gameState.lastPlay = null;
                 gameState.rouletteOutcome = null; 
 
                 let newRoundStartIndex = gameState.players.findIndex(p => p.name === playerForNextRoundStart);
                 
-                // Gestisci il caso in cui il giocatore designato è stato eliminato dalla roulette
                 let safetyBreakTurn = 0;
                 const totalPlayersRR = gameState.players.length;
                 while (safetyBreakTurn < totalPlayersRR && gameState.players[newRoundStartIndex].isEliminated) {
@@ -667,17 +631,15 @@ io.on('connection', (socket) => {
                     return;
                 }
 
-                // Imposta il turno per il nuovo round (questa parte è essenziale per startNewRound)
                 gameState.players.forEach((p, idx) => p.isTurn = false); 
                 gameState.turnIndex = newRoundStartIndex;
                 gameState.players[gameState.turnIndex].isTurn = true;
                 
                 console.log(`[GAME RR] Dopo roulette, il prossimo round sarà avviato da: ${gameState.players[gameState.turnIndex].name}`);
 
-                // AVVIA UN NUOVO ROUND!
                 startNewRound(lobby); 
 
-            }, 4000); // Ritardo di 4 secondi per mostrare l'esito della roulette
+            }, 4000);
         } catch (error) { 
             console.error(`[ERROR] Errore catastrofico in 'play-russian-roulette':`, error.stack); 
             if(lobbyCode) io.to(lobbyCode).emit('error-message', 'Errore interno del server durante la Roulette Russa.');
@@ -716,7 +678,6 @@ io.on('connection', (socket) => {
                     io.to(lobbyCode).emit('lobby-closed'); 
                     delete lobbies[lobbyCode];
                 } else if (lobby.players.length < initialPlayerCount) { 
-                    // Se il vecchio owner si è disconnesso e non c'è un socket associato, riassegna
                     if (lobby.ownerSocketId === disconnectingSocketId && lobby.players.length > 0) {
                         const newOwnerName = lobby.players[0];
                         lobby.ownerSocketId = lobby.playerSockets[newOwnerName] || null;
@@ -724,10 +685,11 @@ io.on('connection', (socket) => {
                     }
                     io.to(lobbyCode).emit('update-players', lobby.players);
                 }
+                res.json({ success: true });
             } else if (lobby.status === 'in-game') {
                 const playerInGame = lobby.gameState.players.find(p => p.name === playerName);
                 if (playerInGame) {
-                    playerInGame.socketId = null; // Il giocatore rimane in gioco, ma è offline
+                    playerInGame.socketId = null; 
                     console.log(`[DISCONNECT-GAME] ${playerName} (socket ${disconnectingSocketId}) disconnesso da ${lobbyCode}. Il giocatore rimane in gioco ma è offline.`);
 
                     const activePlayersInGame = lobby.gameState.players.filter(p => !p.isEliminated);
