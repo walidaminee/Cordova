@@ -262,7 +262,7 @@ function initializeApp() {
     });
 
     // =========================================================================
-    // CORREZIONE: Handler `update-players` Semplificato (già corretto)
+    // Handler `update-players` Semplificato (già corretto)
     // =========================================================================
     socket.on("update-players", (players) => {
         console.log("[SOCKET] Giocatori aggiornati:", players);
