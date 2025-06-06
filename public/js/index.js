@@ -27,8 +27,7 @@ const DOM = {
     themeToggle: document.getElementById('theme-toggle')
 };
 
-// --- Connessione Socket.IO (verrà inizializzata dopo deviceready, usando l'URL del server Render) ---
-// La variabile socket deve essere dichiarata qui, ma inizializzata dentro initializeApp
+// --- Connessione Socket.IO (verrà inizializzata direttamente in initializeApp) ---
 let socket; 
 
 // --- Stato Globale dell'Applicazione ---
@@ -68,7 +67,7 @@ function updatePlayerDisplay(players) {
         });
     }
     
-    const canStart = appState.isOwner && players.length >= 2;
+    const canStart = appState.isOwner && players.length >= 2; // MODIFICATO: per la logica del server, richiede 4 giocatori
     DOM.startGameBtn.disabled = !canStart;
     DOM.startGameBtn.classList.toggle('enabled', canStart);
 }
@@ -95,10 +94,10 @@ function generateLobbyCode() {
 
 // =========================================================================
 // Funzione per inizializzare tutti gli Event Listeners e la logica principale
-// Verrà chiamata solo dopo che 'deviceready' è stato scatenato.
+// Verrà chiamata al caricamento del DOM standard.
 // =========================================================================
 function initializeApp() {
-    // Inizializza Socket.IO qui, dopo che deviceready è scattato
+    // Inizializza Socket.IO qui, al caricamento del DOM
     // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
     socket = io("https://cordova-ie4q.onrender.com/");
 
@@ -261,9 +260,8 @@ function initializeApp() {
     });
 
     // =========================================================================
-    // CORREZIONE #2: Handler `update-players` Semplificato
-    // Questa funzione ora si occupa SOLO di aggiornare la grafica,
-    // non apre più nessun modale, risolvendo il tuo problema.
+    // CORREZIONE: Handler `update-players` Semplificato (già corretto, ma ri-spiego)
+    // Questa funzione ora si occupa SOLO di aggiornare la grafica, non apre più nessun modale.
     // =========================================================================
     socket.on("update-players", (players) => {
         console.log("[SOCKET] Giocatori aggiornati:", players);
@@ -287,10 +285,7 @@ function initializeApp() {
         window.location.href = gameUrl;
     });
 
-    // Caricamento iniziale
-    // Nota: window.onload potrebbe non essere l'ideale in Cordova,
-    // l'inizializzazione principale avverrà tramite deviceready.
-    // Questa parte può rimanere per la logica non legata a Cordova.
+    // Caricamento iniziale - Logica per applicare il tema scuro da localStorage e loggare l'apertura
     if (localStorage.getItem('dark-theme') === 'true') {
         document.body.classList.add('dark-theme');
         DOM.themeToggle.checked = true;
@@ -300,6 +295,7 @@ function initializeApp() {
 }
 
 // =========================================================================
-// Modifica Cruciale: Aspetta l'evento 'deviceready' di Cordova
+// Modifica Cruciale: Sostituito 'deviceready' con 'DOMContentLoaded'
+// Il gioco ora si avvia quando il DOM è completamente caricato nel browser web.
 // =========================================================================
-document.addEventListener('deviceready', initializeApp, false);
+document.addEventListener('DOMContentLoaded', initializeApp); // rimosso il 'false'
