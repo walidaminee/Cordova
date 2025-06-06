@@ -8,7 +8,7 @@
     <meta name="color-scheme" content="light dark">
 
     <title>Il Bar del Paese - Partita in Corso</title>
-    <link rel="stylesheet" href="gioco.css">
+    <link rel="stylesheet" href="css/gioco.css">
 </head>
 <body>
     <main id="game-board">
@@ -43,8 +43,14 @@
         </div>
 
         <div class="center-area">
-            <div id="discard-pile" class="card back" role="img" aria-label="Pila degli Scarti">SCARTI</div>
-            <div id="turn-indicator"> <img src="immagini/arrow.png" alt="Indicatore di turno" id="turn-arrow">
+            <div id="discard-pile-container"> 
+                </div>
+            <div id="discard-pile-info"> 
+                <span class="discard-label">SCARTI</span>
+                <span class="declared-value" style="display:none;"></span>
+            </div>
+            <div id="turn-indicator">
+                <img src="immagini/arrow.png" alt="Indicatore di turno" id="turn-arrow">
             </div>
         </div>
 
@@ -74,6 +80,6 @@
     <audio id="audio-card-deal" src="audio/card_deal.mp3" preload="auto"></audio> 
     
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="gioco.js" defer></script> 
+    <script src="js/gioco.js" defer></script> 
 </body>
 </html>
