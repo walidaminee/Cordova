@@ -25,11 +25,101 @@
     </nav>
 
     <main id="app-modals">
+        <div id="settings-modal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span class="close-btn" id="close-settings-btn" aria-label="Chiudi le impostazioni">&times;</span>
+                <h2>Impostazioni</h2>
+                <div class="setting-item">
+                    <label for="sound-toggle">Abilita suono</label>
+                    <input type="checkbox" id="sound-toggle" checked aria-label="Abilita o disabilita il suono">
+                </div>
+                <div class="setting-item">
+                    <label for="sound-volume">Volume Effetti Sonori</label>
+                    <input type="range" id="sound-volume" min="0" max="100" value="100" aria-label="Regola il volume degli effetti sonori">
+                </div>
+                <div class="setting-item">
+                    <label for="music-toggle">Abilita Musica</label>
+                    <input type="checkbox" id="music-toggle" checked aria-label="Abilita o disabilita la musica">
+                </div>
+                <div class="setting-item">
+                    <label for="music-volume">Volume Musica</label>
+                    <input type="range" id="music-volume" min="0" max="100" value="100" aria-label="Regola il volume della musica">
+                </div>
+                <div class="setting-item">
+                    <label for="theme-toggle">Tema scuro</label>
+                    <input type="checkbox" id="theme-toggle" aria-label="Attiva il tema scuro">
+                </div>
+            </div>
+        </div>
+
+        <div id="create-lobby-modal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span class="close-btn" id="close-create-lobby-btn" aria-label="Chiudi la finestra Crea Lobby">&times;</span>
+                <h2>Crea una Lobby</h2>
+                <div class="player-spot" id="player-1">
+                    <h3>Giocatore 1</h3>
+                    <p>Vuoto</p>
+                </div>
+                <div class="player-spot" id="player-2">
+                    <h3>Giocatore 2</h3>
+                    <p>Vuoto</p>
+                </div>
+                <div class="player-spot" id="player-3">
+                    <h3>Giocatore 3</h3>
+                    <p>Vuoto</p>
+                </div>
+                <div class="player-spot" id="player-4">
+                    <h3>Giocatore 4</h3>
+                    <p>Vuoto</p>
+                </div>
+
+                <div class="lobby-code">
+                    <label for="lobby-code">Codice della Lobby:</label>
+                    <input type="text" id="lobby-code" value="" readonly aria-label="Codice della lobby generato">
+                    <button id="copy-lobby-code" aria-label="Copia il codice della lobby">Copia</button>
+                </div>
+
+                <div class="lobby-code">
+                    <button id="start-game-btn" aria-label="Avvia la partita come proprietario" disabled>Avvia Partita</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="players-modal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span class="close-btn" aria-label="Chiudi la lista giocatori">&times;</span>
+                <h2>Giocatori nella Lobby</h2>
+                <div id="players-list"></div>
+            </div>
+        </div>
+
+        <div id="join-lobby-modal" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span class="close-btn" id="close-join-lobby-btn" aria-label="Chiudi la finestra Unisciti alla Lobby">&times;</span>
+                <h2>Aggiungiti a una Lobby</h2>
+                <div class="lobby-code">
+                    <label for="join-lobby-code">Inserisci il codice della Lobby:</label>
+                    <input type="text" id="join-lobby-code" placeholder="Es. ABC123" aria-label="Inserisci il codice della lobby">
+                </div>
+                <button id="join-lobby-submit" aria-label="Unisciti alla lobby">Unisciti alla Lobby</button>
+            </div>
+        </div>
+
+        <section id="rules-tab" class="modal" role="dialog" aria-modal="true">
+            <div class="modal-content">
+                <span class="close-btn" id="close-rules-btn" aria-label="Chiudi le regole">&times;</span>
+                <h2>Regole del gioco</h2>
+                <h3>Obiettivo del Gioco</h3>
+                <p>Inganna gli altri facendogli credere che le carte che giochi sono quelle dichiarate, senza essere scoperto...</p>
+                </div>
+        </section>
+
         <div id="player-name-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="player-name-modal-title">
             <div class="modal-content">
                 <span class="close-btn" id="close-player-name-modal" aria-label="Chiudi la finestra nome giocatore">&times;</span>
                 <h2 id="player-name-modal-title">Inserisci il tuo nome</h2>
-                <div class="lobby-code"> <label for="player-name-input">Nome Giocatore:</label>
+                <div class="lobby-code"> 
+                    <label for="player-name-input">Nome Giocatore:</label>
                     <input type="text" id="player-name-input" placeholder="Il tuo nome" aria-label="Campo per inserire il nome del giocatore">
                 </div>
                 <button id="player-name-confirm-btn" aria-label="Conferma il nome">Conferma</button>
