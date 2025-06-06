@@ -25,13 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const tableTypeDisplay = document.getElementById('table-type-display');
     
     // RIFERIMENTI AI NUOVI ELEMENTI DELLA PILA DEGLI SCARTI (dal tuo gioco.html precedente)
-    // Se non hai ancora modificato gioco.html per la pila dinamica, questi potrebbero essere null.
-    // Assicurati che il tuo gioco.html abbia: <div id="discard-pile-container">...</div> e <div id="discard-pile-info">...</div>
+    // Nota: Ho modificato gioco.html per includere la nuova struttura con container e info.
     const discardPileContainer = document.getElementById('discard-pile-container'); 
     const discardPileInfo = document.getElementById('discard-pile-info'); 
     const discardLabelSpan = discardPileInfo ? discardPileInfo.querySelector('.discard-label') : null;
     const discardDeclaredValueSpan = discardPileInfo ? discardPileInfo.querySelector('.declared-value') : null;
-
 
     const challengeInfoDiv = document.getElementById('challenge-info');
     const rouletteOutcomeDiv = document.getElementById('roulette-outcome-info'); 
@@ -43,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const audioClick = document.getElementById('audio-click');
     const audioCardDeal = document.getElementById('audio-card-deal'); 
 
-    // NUOVO: Aggiungi il riferimento a turnArrow che mancava dal tuo gioco.js precedente
+    // NUOVO: Aggiungi il riferimento a turnArrow
     const turnArrow = document.getElementById('turn-arrow');
 
 
@@ -686,12 +684,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function animateGunShot(targetPlayerAreaElement) {
+        if (!animationLayer || !gameBoard || !targetPlayerAreaElement) {
+            console.error("[ANIM GUN] Elementi necessari per animazione pistola mancanti.");
+            return Promise.resolve(); // Return a resolved promise to avoid blocking
+        }
         return new Promise(resolve => {
-            if (!animationLayer || !gameBoard || !targetPlayerAreaElement) {
-                console.error("[ANIM GUN] Elementi necessari per animazione pistola mancanti.");
-                resolve(); 
-                return;
-            }
             animationLayer.innerHTML = ''; 
 
             const gunImg = new Image();
@@ -730,10 +727,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     gunImg.addEventListener('transitionend', function handler() {
                         targetPlayerAreaElement.classList.add('shake-animation'); 
                         
-                        // Qui viene riprodotto il suono di sparo/click, basato sull'esito reale della roulette
-                        // che arriva con il game-state-update, non qui durante l'animazione.
-                        // L'audio è gestito dalla funzione `renderStaticGameBoard` al ricevere l'esito della roulette.
-
                         setTimeout(() => {
                             targetPlayerAreaElement.classList.remove('shake-animation'); 
                             if(gunImg.parentNode) gunImg.remove(); 
@@ -930,64 +923,128 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
-            } else {
-                console.warn(`[RENDER STATIC] Giocatore ${myPlayerName} non trovato nello stato. Nascondo la sua area.`);
-                myPlayerAreaDOM.style.visibility = 'hidden';
-            }
-        } else {
-            console.error("[RENDER STATIC] myPlayerAreaDOM non trovato!");
-        }
+            } else { console.warn(`[RENDER STATIC] Giocatore ${myPlayerName} non trovato nello stato. Nascondo la sua area.`); myPlayerAreaDOM.style.visibility = 'hidden'; }
+        } else { console.error("[RENDER STATIC] myPlayerAreaDOM non trovato!"); }
 
         // --- GESTIONE DELLA PILA DEGLI SCARTI ---
         // Ho ripristinato il tuo HTML originale per discardPileDiv, ma ti avevo suggerito di dividerlo in discard-pile-container e discard-pile-info
         // Se non hai ancora fatto quella modifica HTML, questa parte di codice userà ancora discardPileDiv come riferimento unico.
         // Se hai fatto la modifica HTML, assicurati che i riferimenti (discardPileContainer, discardPileInfo, etc.) siano globali nel tuo JS.
-        if (discardPileDiv) { // Era il tuo discardPileDiv originale
-            // Questo codice non userà il nuovo effetto di pila dinamica senza l'HTML corretto
-            // e i riferimenti globali a discardPileContainer, discardPileInfo ecc.
-            discardPileDiv.innerHTML = ''; 
+        if (discardPileContainer && discardPileInfo) { // Usa i riferimenti corretti
+            discardPileContainer.innerHTML = ''; // Pulisci il contenitore delle carte scartate
+            
+            // Ottieni dimensioni della carta per il calcolo
+            const tempDivForStyle = document.createElement('div');
+            tempDivForStyle.className = 'card'; 
+            document.body.appendChild(tempDivForStyle);
+            const cardWidth = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-width'));
+            const cardHeight = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-height'));
+            document.body.removeChild(tempDivForStyle);
+
+            const discardPileContainerRect = discardPileContainer.getBoundingClientRect();
+
             if (state.discardPile && state.discardPile.length > 0) {
-                discardPileDiv.classList.remove('empty-placeholder');
-                discardPileDiv.className = 'card back'; 
-                
-                const lastPlayedCardDeclaredValue = state.lastPlay ? state.lastPlay.declaredValue : 'N/A';
-                
-                const labelSpan = document.createElement('span');
-                labelSpan.className = 'discard-label';
-                labelSpan.textContent = `SCARTI (${state.discardPile.length})`;
-                discardPileDiv.appendChild(labelSpan);
+                // Renderizza ogni carta nella pila degli scarti
+                state.discardPile.forEach((cardValue, index) => {
+                    const cardDiv = document.createElement('div');
+                    cardDiv.className = 'card back'; // Tutte le carte scartate sono sul retro
+                    cardDiv.setAttribute('aria-label', `Carta scartata`);
+                    cardDiv.setAttribute('data-value', cardValue); // Mantiene il valore per riferimento
 
-                // Se non hai discardDeclaredValueSpan dal nuovo HTML, questa parte non farà nulla
-                // Aggiunto un fallback per il tuo HTML attuale
-                let valueSpan = discardPileDiv.querySelector('.declared-value');
-                if (!valueSpan) { // Crea se non esiste (per l'HTML originale)
-                    valueSpan = document.createElement('span');
-                    valueSpan.className = 'declared-value';
+                    // Recupera la posizione casuale memorizzata, o generane una nuova se non esiste
+                    const cardIdInPile = `${cardValue}_${index}`; // ID basato su valore e posizione nella pila
+                    let pos = discardPileCardPositions[cardIdInPile];
+                    if (!pos) {
+                        pos = generateRandomDiscardPosition(
+                            cardWidth, cardHeight, 
+                            discardPileContainerRect.width, discardPileContainerRect.height, 
+                            index // zIndex è l'indice attuale
+                        );
+                        discardPileCardPositions[cardIdInPile] = pos; // Memorizza per i prossimi render
+                    }
+
+                    // Applica le posizioni e rotazioni
+                    cardDiv.style.position = 'absolute';
+                    // Le posizioni x/y sono relative al centro del discardPileContainer.
+                    // Quindi dobbiamo aggiungere (pileContainerWidth / 2) - (cardWidth / 2) per centrarle.
+                    cardDiv.style.left = `${pos.x + (discardPileContainerRect.width / 2) - (cardWidth / 2)}px`;
+                    cardDiv.style.top = `${pos.y + (discardPileContainerRect.height / 2) - (cardHeight / 2)}px`;
+                    cardDiv.style.transform = `rotate(${pos.rotate}deg)`;
+                    cardDiv.style.zIndex = pos.zIndex; // Z-index per l'ordine di sovrapposizione
+
+                    discardPileContainer.appendChild(cardDiv);
+                });
+
+                if (discardLabelSpan) discardLabelSpan.textContent = `SCARTI (${state.discardPile.length})`;
+                if (discardDeclaredValueSpan) {
+                    const lastPlayedCardDeclaredValue = state.lastPlay ? state.lastPlay.declaredValue : 'N/A';
+                    if (lastPlayedCardDeclaredValue && lastPlayedCardDeclaredValue !== 'N/A') { 
+                        discardDeclaredValueSpan.textContent = `(Dichiarato: ${lastPlayedCardDeclaredValue})`;
+                        discardDeclaredValueSpan.style.display = 'block';
+                    } else { discardDeclaredValueSpan.style.display = 'none'; }
                 }
-                if (lastPlayedCardDeclaredValue && lastPlayedCardDeclaredValue !== 'N/A') { 
-                    valueSpan.textContent = `(Dichiarato: ${lastPlayedCardDeclaredValue})`;
-                    valueSpan.style.display = 'block';
+                discardPileInfo.style.opacity = '1';
+
+            } else { // Pila degli scarti vuota
+                if (discardLabelSpan) discardLabelSpan.textContent = 'SCARTI (0)';
+                if (discardDeclaredValueSpan) discardDeclaredValueSpan.style.display = 'none';
+                discardPileInfo.style.opacity = '0.7';
+
+                // Se la pila è vuota, aggiungi un placeholder visivo (ad es. il bordo tratteggiato)
+                const placeholderDiv = document.createElement('div');
+                placeholderDiv.className = 'card back empty-placeholder';
+                placeholderDiv.style.width = '100%'; 
+                placeholderDiv.style.height = '100%';
+                placeholderDiv.style.position = 'absolute';
+                placeholderDiv.style.left = '0';
+                placeholderDiv.style.top = '0';
+                discardPileContainer.appendChild(placeholderDiv);
+            }
+        } else { // Fallback se i nuovi elementi della pila non sono stati trovati (per compatibilità con HTML vecchio)
+            const discardPileDivOld = document.getElementById('discard-pile');
+            if (discardPileDivOld) {
+                discardPileDivOld.innerHTML = ''; 
+                if (state.discardPile && state.discardPile.length > 0) {
+                    discardPileDivOld.classList.remove('empty-placeholder');
+                    discardPileDivOld.className = 'card back'; 
+                    
+                    const lastPlayedCardDeclaredValue = state.lastPlay ? state.lastPlay.declaredValue : 'N/A';
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'discard-label';
+                    labelSpan.textContent = `SCARTI (${state.discardPile.length})`;
+                    discardPileDivOld.appendChild(labelSpan);
+
+                    let valueSpan = discardPileDivOld.querySelector('.declared-value');
+                    if (!valueSpan) { 
+                        valueSpan = document.createElement('span');
+                        valueSpan.className = 'declared-value';
+                    }
+                    if (lastPlayedCardDeclaredValue && lastPlayedCardDeclaredValue !== 'N/A') { 
+                        valueSpan.textContent = `(Dichiarato: ${lastPlayedCardDeclaredValue})`;
+                        valueSpan.style.display = 'block';
+                    } else {
+                        valueSpan.style.display = 'none';
+                    }
+                    discardPileDivOld.appendChild(valueSpan);
+                    
+                    discardPileDivOld.style.opacity = '1'; 
                 } else {
-                    valueSpan.style.display = 'none';
-                }
-                discardPileDiv.appendChild(valueSpan);
-                
-                discardPileDiv.style.opacity = '1'; 
-            } else {
-                discardPileDiv.classList.add('empty-placeholder');
-                discardPileDiv.className = 'card back empty-placeholder';
-                
-                const labelSpan = document.createElement('span');
-                labelSpan.className = 'discard-label';
-                labelSpan.textContent = 'SCARTI (0)';
-                discardPileDiv.appendChild(labelSpan);
+                    discardPileDivOld.classList.add('empty-placeholder');
+                    discardPileDivOld.className = 'card back empty-placeholder';
+                    
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'discard-label';
+                    labelSpan.textContent = 'SCARTI (0)';
+                    discardPileDivOld.appendChild(labelSpan);
 
-                let valueSpan = discardPileDiv.querySelector('.declared-value');
-                if (valueSpan) { // Nascondi se esiste
-                    valueSpan.style.display = 'none';
-                }
+                    let valueSpan = discardPileDivOld.querySelector('.declared-value');
+                    if (valueSpan) { 
+                        valueSpan.style.display = 'none';
+                    }
 
-                discardPileDiv.style.opacity = '0.7';
+                    discardPileDivOld.style.opacity = '0.7';
+                }
             }
         }
 
