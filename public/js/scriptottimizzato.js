@@ -4,15 +4,14 @@ const DOM = {
     createLobbyModal: document.getElementById('create-lobby-modal'),
     joinLobbyModal: document.getElementById('join-lobby-modal'),
     playersModal: document.getElementById('players-modal'),
-    rulesTab: document.getElementById('rules-tab'), // Ora è un modale completo
+    rulesTab: document.getElementById('rules-tab'), 
 
     settingsBtn: document.getElementById('settings-btn'),
     createLobbyBtn: document.getElementById('create-lobby-btn'),
     joinLobbyBtn: document.getElementById('join-lobby-btn'),
     rulesBtn: document.getElementById('rules-btn'),
 
-    // Selezioniamo TUTTI i pulsanti di chiusura con una sola classe per semplicità
-    closeButtons: document.querySelectorAll('.close-btn'), // Assicurati che rules-tab abbia un close-btn al suo interno
+    closeButtons: document.querySelectorAll('.close-btn'), 
 
     lobbyCodeInput: document.getElementById('lobby-code'),
     copyLobbyBtn: document.getElementById('copy-lobby-code'),
@@ -20,14 +19,20 @@ const DOM = {
     joinLobbyCodeInput: document.getElementById('join-lobby-code'),
     joinLobbySubmit: document.getElementById('join-lobby-submit'),
     
-    // Contenitori per le liste giocatori
     playersListContainer: document.getElementById('players-list'),
     playerSpots: document.querySelectorAll('.player-spot p'),
 
-    themeToggle: document.getElementById('theme-toggle')
+    themeToggle: document.getElementById('theme-toggle'),
+
+    // NUOVI RIFERIMENTI PER IL MODALE NOME GIOCATORE
+    playerNameModal: document.getElementById('player-name-modal'),
+    playerNameModalTitle: document.getElementById('player-name-modal-title'),
+    playerNameInput: document.getElementById('player-name-input'),
+    playerNameConfirmBtn: document.getElementById('player-name-confirm-btn'),
+    playerNameCancelBtn: document.getElementById('player-name-cancel-btn'),
 };
 
-// --- Connessione Socket.IO (verrà inizializzata dopo il DOMContentLoaded) ---
+// --- Connessione Socket.IO ---
 let socket; 
 
 // --- Stato Globale dell'Applicazione ---
@@ -51,7 +56,69 @@ function toggleModal(modalElement, show) {
     }
 }
 
-// --- Funzioni di Logica ---
+// =========================================================================
+// NUOVA FUNZIONE: Mostra un modale per inserire il nome del giocatore
+// Restituisce una Promise che si risolve con il nome o si rifiuta se annullato.
+// =========================================================================
+function getPlayerName(title = "Inserisci il tuo nome") {
+    return new Promise((resolve, reject) => {
+        DOM.playerNameModalTitle.textContent = title;
+        DOM.playerNameInput.value = ''; // Pulisci l'input
+        toggleModal(DOM.playerNameModal, true); // Mostra il modale
+
+        // Gestori eventi per i pulsanti del modale
+        const confirmHandler = () => {
+            const name = DOM.playerNameInput.value.trim();
+            if (name === '') {
+                alert("Il nome non può essere vuoto.");
+                return;
+            }
+            toggleModal(DOM.playerNameModal, false);
+            removeListeners(); // Rimuovi i listener per evitare doppie chiamate
+            resolve(name); // Risolvi la Promise con il nome
+        };
+
+        const cancelHandler = () => {
+            toggleModal(DOM.playerNameModal, false);
+            removeListeners(); // Rimuovi i listener
+            reject('Cancellato'); // Rifiuta la Promise
+        };
+
+        const closeBtnHandler = () => {
+            toggleModal(DOM.playerNameModal, false);
+            removeListeners();
+            reject('Chiuso'); // Rifiuta la Promise anche con il pulsante chiudi
+        };
+
+        // Aggiungi i listener
+        DOM.playerNameConfirmBtn.addEventListener('click', confirmHandler);
+        DOM.playerNameCancelBtn.addEventListener('click', cancelHandler);
+        // Usa il close button specifico del modale nome giocatore per evitare conflitti con DOM.closeButtons
+        DOM.playerNameModal.querySelector('#close-player-name-modal').addEventListener('click', closeBtnHandler);
+
+        // Funzione per rimuovere i listener una volta che la Promise è risolta/rifiutata
+        const removeListeners = () => {
+            DOM.playerNameConfirmBtn.removeEventListener('click', confirmHandler);
+            DOM.playerNameCancelBtn.removeEventListener('click', cancelHandler);
+            DOM.playerNameModal.querySelector('#close-player-name-modal').removeEventListener('click', closeBtnHandler);
+        };
+
+        // Permetti anche la conferma con Invio nell'input
+        const inputKeyHandler = (event) => {
+            if (event.key === 'Enter') {
+                confirmHandler();
+            }
+        };
+        DOM.playerNameInput.addEventListener('keydown', inputKeyHandler);
+        DOM.playerNameModal.addEventListener('transitionend', function focusInput() {
+            if (DOM.playerNameModal.classList.contains('is-active')) {
+                DOM.playerNameInput.focus(); // Metti il focus sull'input quando il modale è visibile
+            }
+            DOM.playerNameModal.removeEventListener('transitionend', focusInput);
+        }, { once: true });
+    });
+}
+
 
 function updatePlayerDisplay(players) {
     DOM.playerSpots.forEach((spot, index) => {
@@ -67,22 +134,21 @@ function updatePlayerDisplay(players) {
         });
     }
     
-    // NOTA: Qui la logica del server richiede esattamente 4 giocatori per avviare, non 2.
-    // Ho mantenuto il 2 come nel tuo codice, ma se il server si aspetta 4, cambialo in `players.length === 4`.
-    const canStart = appState.isOwner && players.length >= 2; 
+    // NOTA: Il tuo server richiede esattamente 4 giocatori per avviare la partita.
+    // Ho corretto la condizione a `players.length === 4` per essere coerente con il backend.
+    const canStart = appState.isOwner && players.length === 4; 
     DOM.startGameBtn.disabled = !canStart;
     DOM.startGameBtn.classList.toggle('enabled', canStart);
 }
 
 function resetLobbyState() {
-    // Chiude tutti i modali aperti
     document.querySelectorAll('.modal.is-active').forEach(modal => toggleModal(modal, false));
 
     appState.currentLobbyCode = null;
     appState.currentPlayerName = null;
     appState.isOwner = false;
 
-    updatePlayerDisplay([]); // Pulisce la visualizzazione dei giocatori
+    updatePlayerDisplay([]); 
 }
 
 function generateLobbyCode() {
@@ -96,82 +162,75 @@ function generateLobbyCode() {
 
 // =========================================================================
 // Funzione per inizializzare tutti gli Event Listeners e la logica principale
-// Verrà chiamata al caricamento del DOM standard.
 // =========================================================================
 function initializeApp() {
-    // Inizializza Socket.IO qui
-    // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
     socket = io("https://cordova-ie4q.onrender.com/");
 
     // --- Event Listeners UI ---
 
-    // Menu Principale
-    DOM.createLobbyBtn.addEventListener('click', () => {
-        const player = prompt("Inserisci il tuo nome (Proprietario):");
-        if (!player || player.trim() === '') {
-            alert("Il nome non può essere vuoto.");
-            return;
+    // Menu Principale - MODIFICATO per usare getPlayerName()
+    DOM.createLobbyBtn.addEventListener('click', async () => {
+        try {
+            const player = await getPlayerName("Inserisci il tuo nome (Proprietario)");
+            appState.currentPlayerName = player;
+            appState.isOwner = true;
+            const lobbyCode = generateLobbyCode();
+
+            fetch('https://cordova-ie4q.onrender.com/crea-lobby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codice: lobbyCode, player: player })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    appState.currentLobbyCode = lobbyCode;
+                    DOM.lobbyCodeInput.value = lobbyCode;
+                    socket.emit("join-lobby", { codice: lobbyCode, player: player });
+
+                    toggleModal(DOM.createLobbyModal, true);
+                } else {
+                    alert("Errore dal server: " + data.error);
+                    resetLobbyState();
+                }
+            })
+            .catch(err => {
+                console.error("Errore fetch 'crea-lobby':", err);
+                alert("Errore di rete. Impossibile creare la lobby.");
+            });
+        } catch (error) {
+            console.log("Creazione Lobby annullata:", error);
+            // Non fare nulla se l'utente annulla il nome
         }
-
-        appState.currentPlayerName = player;
-        appState.isOwner = true;
-        const lobbyCode = generateLobbyCode();
-
-        // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
-        fetch('https://cordova-ie4q.onrender.com/crea-lobby', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ codice: lobbyCode, player: player })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                appState.currentLobbyCode = lobbyCode;
-                DOM.lobbyCodeInput.value = lobbyCode;
-                socket.emit("join-lobby", { codice: lobbyCode, player: player });
-
-                // APRIAMO SOLO IL MODALE DI CREAZIONE
-                toggleModal(DOM.createLobbyModal, true);
-            } else {
-                alert("Errore dal server: " + data.error);
-                resetLobbyState();
-            }
-        })
-        .catch(err => {
-            console.error("Errore fetch 'crea-lobby':", err);
-            alert("Errore di rete. Impossibile creare la lobby.");
-        });
     });
 
     DOM.joinLobbyBtn.addEventListener('click', () => toggleModal(DOM.joinLobbyModal, true));
     DOM.settingsBtn.addEventListener('click', () => toggleModal(DOM.settingsModal, true));
     DOM.rulesBtn.addEventListener('click', () => {
-        // Ora rulesTab è un modale completo, quindi usa toggleModal
         toggleModal(DOM.rulesTab, true);
     });
 
-    // Gestione Chiusura Modali (un solo handler per tutti)
+    // Gestione Chiusura Modali (un solo handler per tutti i pulsanti .close-btn tranne quello del nome)
     DOM.closeButtons.forEach(button => {
+        // Ignora il pulsante di chiusura del modale nome giocatore, che ha un handler specifico
+        if (button.id === 'close-player-name-modal') return; 
+
         button.addEventListener('click', (event) => {
             const modalToClose = event.target.closest('.modal');
             
-            // Logica speciale per quando il proprietario chiude il modale di creazione
             if (modalToClose.id === 'create-lobby-modal' && appState.isOwner) {
-                // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
                 fetch('https://cordova-ie4q.onrender.com/chiudi-lobby', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ codice: appState.currentLobbyCode })
-                }).finally(resetLobbyState); // Resetta lo stato in ogni caso
+                }).finally(resetLobbyState); 
             } 
-            // Logica speciale per quando un giocatore chiude il modale della lobby
             else if (modalToClose.id === 'players-modal' && !appState.isOwner) {
-                // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
                 fetch('https://cordova-ie4q.onrender.com/lascia-lobby', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ codice: appState.currentLobbyCode, player: appState.currentPlayerName })
-                }).finally(resetLobbyState); // Resetta lo stato in ogni caso
+                }).finally(resetLobbyState); 
             }
             else {
                 toggleModal(modalToClose, false);
@@ -180,37 +239,38 @@ function initializeApp() {
     });
 
 
-    // Unisciti a Lobby
-    DOM.joinLobbySubmit.addEventListener('click', () => {
+    // Unisciti a Lobby - MODIFICATO per usare getPlayerName()
+    DOM.joinLobbySubmit.addEventListener('click', async () => {
         const lobbyCode = DOM.joinLobbyCodeInput.value.trim().toUpperCase();
-        if (!lobbyCode) return alert("Inserisci un codice valido.");
+        if (!lobbyCode) { alert("Inserisci un codice valido."); return; }
         
-        const player = prompt("Inserisci il tuo nome:");
-        if (!player || player.trim() === '') return alert("Il nome non può essere vuoto.");
+        try {
+            const player = await getPlayerName("Inserisci il tuo nome");
+            appState.currentPlayerName = player;
+            appState.isOwner = false;
 
-        appState.currentPlayerName = player;
-        appState.isOwner = false;
-
-        // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
-        fetch('https://cordova-ie4q.onrender.com/unisciti-lobby', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ codice: lobbyCode, player })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                appState.currentLobbyCode = lobbyCode;
-                socket.emit("join-lobby", { codice: lobbyCode, player });
-                toggleModal(DOM.joinLobbyModal, false); // Chiudi modale di inserimento
-                
-                // Per chi si unisce, è corretto aprire il modale dei giocatori
-                toggleModal(DOM.playersModal, true);
-            } else {
-                alert("⚠️ " + data.error);
-            }
-        })
-        .catch(err => console.error("Errore fetch 'unisciti-lobby':", err));
+            fetch('https://cordova-ie4q.onrender.com/unisciti-lobby', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codice: lobbyCode, player })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    appState.currentLobbyCode = lobbyCode;
+                    socket.emit("join-lobby", { codice: lobbyCode, player });
+                    toggleModal(DOM.joinLobbyModal, false); 
+                    
+                    toggleModal(DOM.playersModal, true);
+                } else {
+                    alert("⚠️ " + data.error);
+                }
+            })
+            .catch(err => console.error("Errore fetch 'unisciti-lobby':", err));
+        } catch (error) {
+            console.log("Unione Lobby annullata:", error);
+            // Non fare nulla se l'utente annulla il nome
+        }
     });
 
     // Altri pulsanti
@@ -226,7 +286,6 @@ function initializeApp() {
     DOM.startGameBtn.addEventListener('click', () => {
         if (!appState.isOwner || !appState.currentSocketId) return;
 
-        // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
         fetch('https://cordova-ie4q.onrender.com/avvia-partita', {
             method: 'POST',
             headers: {
@@ -261,9 +320,6 @@ function initializeApp() {
         console.log('[SOCKET.IO] Disconnesso.');
     });
 
-    // =========================================================================
-    // Handler `update-players` Semplificato (già corretto)
-    // =========================================================================
     socket.on("update-players", (players) => {
         console.log("[SOCKET] Giocatori aggiornati:", players);
         updatePlayerDisplay(players);
@@ -277,12 +333,8 @@ function initializeApp() {
     socket.on('game-started', (lobbyCode) => {
         console.log(`Partita avviata per la lobby ${lobbyCode}! Reindirizzamento in corso...`);
         
-        // Costruiamo l'URL per la nuova pagina di gioco.
-        // Includiamo il codice della lobby e il nome del giocatore corrente nei parametri dell'URL.
-        // Queste informazioni saranno essenziali nella nuova pagina per sapere "chi siamo".
         const gameUrl = `gioco.html?code=${lobbyCode}&player=${encodeURIComponent(appState.currentPlayerName)}`;
         
-        // Reindirizziamo l'utente alla pagina del gioco.
         window.location.href = gameUrl;
     });
 
@@ -291,12 +343,10 @@ function initializeApp() {
         document.body.classList.add('dark-theme');
         DOM.themeToggle.checked = true;
     }
-    // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
     fetch('https://cordova-ie4q.onrender.com/log/apertura-gioco', { method: 'POST' });
 }
 
 // =========================================================================
-// MODIFICA CRUCIALE: Sostituito 'deviceready' con 'DOMContentLoaded'
-// Il gioco ora si avvia quando il DOM è completamente caricato nel browser web.
+// Il gioco si avvia quando il DOM è completamente caricato nel browser web.
 // =========================================================================
 document.addEventListener('DOMContentLoaded', initializeApp);
