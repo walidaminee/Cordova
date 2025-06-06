@@ -1,7 +1,7 @@
 /* AGGIUNTO: Direttiva @font-face per caricare il font MedievalSharp localmente */
 @font-face {
     font-family: 'MedievalSharp'; /* Questo è il nome che usi in var(--font-main) */
-    src: url('fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso e formato del tuo font locale */
+    src: url('../fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso corretto */
     font-weight: normal; 
     font-style: normal;  
     font-display: swap; /* Consigliato per le prestazioni di caricamento dei font */
@@ -16,39 +16,26 @@
     --text-color-on-light-bg: #000;
     --primary-color: #f8c946;
     --card-back-bg: #5a3a22;
-    --card-width: 60px; /* Ancora più piccole per gli angoli */
-    --card-height: 90px;
+    --card-width: 75px;  /* AUMENTATO: Nuova larghezza delle carte (da 60px) */
+    --card-height: 105px; /* AUMENTATO: Nuova altezza delle carte (da 85px, mantenendo aspect ratio ~0.714) */
     --font-main: 'MedievalSharp', cursive, sans-serif; /* Ora si basa sul font locale */
-}
-
-/* Stili essenziali di Cordova per il body e elementi globali */
-/* RIMOSSO/MODIFICATO: Cleanup per compatibilità mobile e safe-area-inset se non usi Cordova */
-/* Ho rimosso i selettori universali Cordova-specifici e le env() funzioni se non stai facendo un'app ibrida */
-* {
-    -webkit-tap-highlight-color: rgba(0,0,0,0); /* Prevent tap highlight on mobile */
+    --card-border-radius: 5px; /* NUOVO: Variabile per il border-radius delle carte */
 }
 
 body {
-    /* RIMOSSO/MODIFICATO: Rimosse le proprietà Cordova-specifiche */
-    /* -webkit-touch-callout: none; */
-    /* -webkit-text-size-adjust: none; */
-    /* -webkit-user-select: none; */
-    
+    /* Rimosse le proprietà Cordova-specifiche (user-select, touch-callout, text-size-adjust) */
     font-family: var(--font-main); 
     margin: 0;
     background-color: var(--table-bg-color);
-    /* Percorso corretto dell'immagine di sfondo */
-    background-image: url('immagini/tavolo_non_pixelato.png'); 
+    /* CORRETTO: Percorso immagine di sfondo */
+    background-image: url('../immagini/tavolo_non_pixelato.png'); 
     background-size: cover; 
     background-position: center center;
     background-repeat: no-repeat; 
     background-attachment: fixed;
     color: var(--text-color-on-dark-bg); 
-    overflow: hidden; /* Evita scrollbar non desiderate */
-
-    /* RIMOSSO: padding per safe-area-inset di Cordova, a meno che non lo usi specificamente in una PWA */
-    /* padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); */
-    
+    overflow: hidden; 
+    /* Rimosso padding env(safe-area-inset) se non fai PWA */
     width:100vw; 
     height:100vh; 
 }
@@ -85,8 +72,8 @@ body {
 
 #game-board {
     display: grid;
-    grid-template-columns: 200px 1fr 200px; 
-    grid-template-rows: 180px 1fr 180px; 
+    grid-template-columns: 220px 1fr 220px; 
+    grid-template-rows: 200px 1fr 220px; 
     width: 100vw;
     height: 100vh;
     padding: 5px;
@@ -111,7 +98,7 @@ body {
     width: var(--card-width); 
     height: var(--card-height);
     border: 1px solid var(--card-border-color); 
-    border-radius: 6px;
+    border-radius: var(--card-border-radius); 
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3); 
     display: flex;
     justify-content: center; 
@@ -120,12 +107,18 @@ body {
     transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease-out;
     pointer-events: none; 
     z-index: 550; 
+
+    background-size: cover; 
+    background-position: center; 
+    background-repeat: no-repeat; 
+    text-indent: -9999px; 
+    color: transparent; 
 }
 
 .flying-card.back {
     background-color: var(--card-back-bg); 
-    /* Percorso corretto dell'immagine del dorso */
-    background-image: url('immagini/card-back.png');
+    /* CORRETTO: Percorso immagine del dorso */
+    background-image: url('../immagini/card-back.png');
     background-size: cover; 
     color: transparent;
 }
@@ -141,15 +134,56 @@ body {
     gap: 5px; 
 }
 #player-top-right { grid-area: 1 / 3; }
+
+/* MODIFICATO: Stili per la pila degli scarti dinamica (contenitore e info) */
 .center-area { 
     grid-area: 2 / 2; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    /* Ho notato che l'HTML precedente non aveva turn-indicator.
-       Se lo vuoi, ricontrolla il gioco.html che ti ho fornito 
-       per la pila degli scarti dinamica (che include anche turn-indicator). */
+    position: relative; 
+    flex-direction: column; 
 } 
+
+#discard-pile-container { 
+    position: relative; 
+    width: calc(var(--card-width) * 1.5); 
+    height: calc(var(--card-height) * 1.5); 
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    border: 2px dashed rgba(255,255,255,0.2); 
+    border-radius: var(--card-border-radius);
+    margin-bottom: 10px; 
+    overflow: hidden; /* Per assicurare che le carte casuali siano contenute */
+}
+
+#discard-pile-info { 
+    text-align: center; 
+    color: white; 
+    font-size: 0.8rem;
+    position: absolute; 
+    bottom: -30px; 
+    background-color: rgba(0,0,0,0.5);
+    padding: 3px 8px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+#discard-pile-info .discard-label {
+    font-size: 0.8em;
+    line-height: 1;
+}
+#discard-pile-info .declared-value {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-top: 3px;
+    line-height: 1;
+    display: block; 
+}
+/* FINE MODIFICHE PILA SCARTI */
+
 #player-bottom-left { grid-area: 3 / 1; } 
 #player-actions-panel { 
     grid-area: 3 / 2; 
@@ -185,7 +219,6 @@ body {
 }
 #challenge-info b { color: var(--primary-color); }
 
-/* Nuovo stile per l'esito della Roulette Russa */
 #roulette-outcome-info {
     text-align: center;
     padding: 10px;
@@ -200,33 +233,34 @@ body {
 }
 #roulette-outcome-info b { color: #f8c946; }
 
-
-#discard-pile {
-    width: var(--card-width); 
-    height: var(--card-height); 
-    border: 2px ridge #7a6a4f; 
-    color: white; 
-    font-size: 0.8rem; 
-    opacity: 1;
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-sizing: border-box; 
+/* Stile per la pila degli scarti (discard pile) - RIMOSSO #discard-pile originale se si usa il nuovo sistema dinamico */
+/* Questo selettore è rimasto nel tuo CSS, ma dovrebbe essere rimosso o modificato se stai usando #discard-pile-container */
+/* Ho mantenuto il commento qui, ma il codice Javascript si aspetta la nuova struttura con container e info */
+#discard-pile { /* Questo selettore non dovrebbe più essere usato per la pila dinamica */
+    /*width: var(--card-width); */
+    /*height: var(--card-height); */
+    /*border: 2px ridge #7a6a4f; */
+    /*color: white; */
+    /*font-size: 0.8rem; */
+    /*opacity: 1;*/
+    /*display: flex; */
+    /*flex-direction: column; */
+    /*justify-content: center;*/
+    /*align-items: center;*/
+    /*text-align: center;*/
+    /*box-sizing: border-box; */
 }
-#discard-pile .discard-label {
+#discard-pile .discard-label { /* Questi selettori ora si applicano a #discard-pile-info */
     font-size: 0.8em;
     line-height: 1;
 }
-#discard-pile .declared-value {
+#discard-pile .declared-value { /* Questi selettori ora si applicano a #discard-pile-info */
     font-size: 0.9em;
     font-weight: bold;
     color: var(--primary-color);
     margin-top: 3px;
     line-height: 1;
 }
-
 
 #discard-pile.empty-placeholder {
     background-image: none; 
@@ -280,11 +314,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(var(--card-height) + 5px); 
+    min-height: calc(var(--card-height) + 30px); /* Altezza minima per l'effetto di abbassamento */
     padding: 2px;
-    position: relative; 
+    position: relative; /* Base per posizionamento assoluto delle carte */
     flex-wrap: nowrap; 
     overflow: hidden; 
+    width: 100%; /* Permette alla mano di estendersi */
 }
 /* Stile per il messaggio di attesa del round */
 .player-hand.awaiting-round {
@@ -295,7 +330,6 @@ body {
     font-size: 0.8em;
     opacity: 0.7;
     text-align: center;
-    /* Assicura che il messaggio non sia schiacciato dalle carte quando vengono rimosse */
     min-width: var(--card-width); 
 }
 
@@ -304,7 +338,7 @@ body {
     height: var(--card-height); 
     background-color: var(--card-bg-color); 
     border: 1px solid var(--card-border-color); 
-    border-radius: 5px; 
+    border-radius: var(--card-border-radius); /* Usa la variabile, da definire in :root se vuoi flessibilità */
     box-shadow: 1px 1px 2px rgba(0,0,0,0.2); 
     color: var(--text-color-on-light-bg); 
     display: flex; 
@@ -316,22 +350,49 @@ body {
     box-sizing: border-box;
     flex-shrink: 0; 
     transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border 0.2s ease-out; 
+
+    background-size: cover; 
+    background-position: center; 
+    background-repeat: no-repeat; 
+    text-indent: -9999px; 
+    color: transparent; 
+    overflow: hidden; 
 }
-.card.back { /* Stile dorso */
+/* Stili specifici per le immagini del fronte delle carte */
+.card.re { background-image: url('../immagini/king.png'); }
+.card.regina { background-image: url('../immagini/queen.png'); }
+.card.asso { background-image: url('../immagini/ace.png'); }
+.card.jolly { background-image: url('../immagini/joker.png'); }
+
+/* Stile dorso */
+.card.back { 
     background-color: var(--card-back-bg); 
-    /* Assicurati che il percorso dell'immagine del dorso sia corretto! */
-    background-image: url('immagini/card-back.png');
+    /* CORRETTO: Percorso immagine del dorso */
+    background-image: url('../immagini/card-back.png');
     background-size: cover; 
     background-position: center; 
     color: transparent;
 }
 
+/* Carte nella pila degli scarti - NUOVO STILE (per le singole carte dentro discard-pile-container) */
+/* Questo stile si applica alle singole carte che vengono aggiunte dinamicamente alla pila degli scarti */
+#discard-pile-container .card {
+    position: absolute; 
+    transition: none; /* Disabilita la transizione per i movimenti casuali */
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.3); 
+    background-image: url('../immagini/card-back.png'); /* Le carte scartate sono sempre coperte */
+    background-size: cover;
+    background-position: center;
+    background-color: var(--card-back-bg);
+}
+
 /* Carte statiche nella mano */
 .player-hand .card.static-in-hand {
     opacity: 1; 
-    transform: translate(0,0) scale(1); 
-    position: relative; 
+    /* Transform e position sono gestiti direttamente dal JS per l'effetto a ventaglio */
+    position: relative; /* Mantiene un contesto di impilamento corretto */
     box-shadow: 1px 1px 3px rgba(0,0,0,0.3);
+    /* Rimosso transform: translate(0,0) scale(1); qui, sarà gestito dal JS */
 }
 
 .player-hand .card.playable.static-in-hand {
@@ -345,7 +406,7 @@ body {
     box-shadow: 0 4px 10px rgba(248, 201, 70, 0.6);
 }
 
-/* NUOVO: Stile per le carte selezionate */
+/* Stile per le carte selezionate */
 .player-hand .card.selected {
     border: 3px solid var(--primary-color); 
     box-shadow: 0 0 15px rgba(248, 201, 70, 0.8); 
@@ -375,7 +436,6 @@ body {
     filter: grayscale(100%) brightness(0.6); 
     opacity: 0.5; 
 }
-/* Modifica per l'area eliminata, per non mostrare "Attendendo nuovo round..." */
 .player-area.eliminated .player-hand p { color: #999 !important; } 
 
 /* Pannello Azioni (sotto, al centro) */
@@ -426,4 +486,31 @@ body {
 }
 #game-notifications strong {
     color: var(--primary-color); 
+}
+
+/* Stili per l'indicatore di turno circolare */
+#turn-indicator {
+    position: absolute; 
+    width: 120px; 
+    height: 120px;
+    background-color: rgba(248, 201, 70, 0.2); 
+    border: 2px solid var(--primary-color);
+    border-radius: 50%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%); 
+    z-index: 100; 
+    pointer-events: none; 
+    opacity: 0; 
+    transition: opacity 0.5s ease-out;
+}
+
+#turn-arrow {
+    width: 60px; 
+    height: auto;
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1.0); 
+    transform-origin: center center; 
 }
