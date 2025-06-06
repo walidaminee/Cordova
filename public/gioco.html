@@ -2,21 +2,12 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self' data: https://ssl.gstatic.com 'unsafe-eval';
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.socket.io https://cordova-ie4q.onrender.com;
-        connect-src 'self' https://cordova-ie4q.onrender.com wss://cordova-ie4q.onrender.com;
-        media-src *;
-        img-src 'self' data: content:;
-    ">
     <meta name="format-detection" content="telephone=no">
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
     <meta name="color-scheme" content="light dark">
 
     <title>Il Bar del Paese - Partita in Corso</title>
-    <link href="https://fonts.googleapis.com/css2?family=MedievalSharp&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="gioco.css">
 </head>
 <body>
@@ -53,6 +44,8 @@
 
         <div class="center-area">
             <div id="discard-pile" class="card back" role="img" aria-label="Pila degli Scarti">SCARTI</div>
+            <div id="turn-indicator"> <img src="immagini/arrow.png" alt="Indicatore di turno" id="turn-arrow">
+            </div>
         </div>
 
         <div class="player-area" id="player-bottom-left">
@@ -76,12 +69,11 @@
 
     <audio id="audio-sigh" src="audio/carica.mp3" preload="auto"></audio>
     <audio id="audio-revolver" src="audio/panic.mp3" preload="auto"></audio>
-    <audio id="audio-shot" src="audio/boom.mp3" preload="auto"></audio>    
-    <audio id="audio-click" src="audio/vuoto.mp3" preload="auto"></audio>    
+    <audio id="audio-shot" src="audio/boom.mp3" preload="auto"></audio>    
+    <audio id="audio-click" src="audio/vuoto.mp3" preload="auto"></audio>    
     <audio id="audio-card-deal" src="audio/card_deal.mp3" preload="auto"></audio> 
     
-    <script src="cordova.js"></script>
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <script src="js/gioco.js" defer></script>
+    <script src="gioco.js" defer></script> 
 </body>
 </html>
