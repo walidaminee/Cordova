@@ -28,7 +28,7 @@ body {
     margin: 0;
     background-color: var(--table-bg-color);
     /* CORRETTO: Percorso immagine di sfondo */
-    background-image: url('../immagini/tavolo_non_pixelato.png'); 
+    background-image: url('../img/sfondo_gioco.png'); 
     background-size: cover; 
     background-position: center center;
     background-repeat: no-repeat; 
