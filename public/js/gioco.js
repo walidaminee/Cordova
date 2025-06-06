@@ -1,4 +1,6 @@
-document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app Cordova
+// MODIFICATO: Usiamo 'DOMContentLoaded' per applicazioni web standard.
+// Il codice si avvia quando il DOM è completamente caricato.
+document.addEventListener('DOMContentLoaded', () => { 
     // ****** AGGIORNATO CON L'URL DEL TUO SERVER RENDER ******
     const socket = io("https://cordova-ie4q.onrender.com/"); 
 
@@ -21,7 +23,16 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
     const playSelectedCardsBtn = document.getElementById('play-selected-cards-btn');
     const playRouletteBtn = document.getElementById('play-roulette-btn'); 
     const tableTypeDisplay = document.getElementById('table-type-display');
-    const discardPileDiv = document.getElementById('discard-pile');
+    
+    // RIFERIMENTI AI NUOVI ELEMENTI DELLA PILA DEGLI SCARTI (dal tuo gioco.html precedente)
+    // Se non hai ancora modificato gioco.html per la pila dinamica, questi potrebbero essere null.
+    // Assicurati che il tuo gioco.html abbia: <div id="discard-pile-container">...</div> e <div id="discard-pile-info">...</div>
+    const discardPileContainer = document.getElementById('discard-pile-container'); 
+    const discardPileInfo = document.getElementById('discard-pile-info'); 
+    const discardLabelSpan = discardPileInfo ? discardPileInfo.querySelector('.discard-label') : null;
+    const discardDeclaredValueSpan = discardPileInfo ? discardPileInfo.querySelector('.declared-value') : null;
+
+
     const challengeInfoDiv = document.getElementById('challenge-info');
     const rouletteOutcomeDiv = document.getElementById('roulette-outcome-info'); 
     const gameNotificationsDiv = document.getElementById('game-notifications');
@@ -32,9 +43,17 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
     const audioClick = document.getElementById('audio-click');
     const audioCardDeal = document.getElementById('audio-card-deal'); 
 
+    // NUOVO: Aggiungi il riferimento a turnArrow che mancava dal tuo gioco.js precedente
+    const turnArrow = document.getElementById('turn-arrow');
+
+
     let currentGameState = null; 
     let isAnimatingDeal = false; 
     let selectedCards = []; 
+
+    // NUOVO: Mappa per memorizzare le posizioni casuali delle carte nella pila degli scarti
+    let discardPileCardPositions = {}; // { cardValue_index: { x, y, rotate, zIndex } }
+
 
     if (!lobbyCode || !myPlayerName) {
         showNotification("Errore: Informazioni sulla lobby o sul giocatore mancanti nell'URL. Verrai reindirizzato.", 5000);
@@ -176,7 +195,7 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
             return;
         }
 
-        const cardsToPlayValues = selectedCards.map(cardEl => cardEl.textContent);
+        const cardsToPlayValues = selectedCards.map(cardEl => cardEl.getAttribute('data-value'));
         
         // Disabilita immediatamente tutte le carte giocabili e i pulsanti dopo la giocata
         const myHandUiDiv = myPlayerAreaDOM.querySelector('.player-hand');
@@ -232,15 +251,23 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
     socket.on('game-state-update', (gameState) => {
         const previousRound = currentGameState ? currentGameState.roundNumber : -1;
         const previousMyCardCount = currentGameState && currentGameState.myHand ? currentGameState.myHand.length : -1;
-        
+        const previousDiscardPileLength = currentGameState && currentGameState.discardPile ? currentGameState.discardPile.length : 0; // NUOVO
+
         currentGameState = gameState; 
         
         const meInCurrentState = gameState.players.find(p => p.name === myPlayerName);
         const myCurrentCardCount = meInCurrentState && meInCurrentState.isEliminated === false ? gameState.myHand.length : 0;
+        const currentDiscardPileLength = gameState.discardPile ? gameState.discardPile.length : 0; // NUOVO
         
         const isNewDeal = (gameState.roundNumber !== previousRound) || 
                                (gameState.roundNumber === previousRound && previousMyCardCount === 0 && myCurrentCardCount > 0 && !gameState.challenge);
         
+        // NUOVO: Reset delle posizioni delle carte nella pila degli scarti se è un nuovo deal o la pila è stata azzerata
+        if (isNewDeal || (currentDiscardPileLength === 0 && previousDiscardPileLength > 0)) {
+            discardPileCardPositions = {};
+            console.log("[DEBUG] discardPileCardPositions resettato.");
+        }
+
         if (isNewDeal && !isAnimatingDeal) {
             console.log(`[${myPlayerName}] Rilevato nuovo deal (Round ${gameState.roundNumber}). Avvio animazione distribuzione.`);
             isAnimatingDeal = true;
@@ -248,6 +275,7 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
             document.querySelectorAll('.player-hand').forEach(ph => ph.innerHTML = ''); 
             document.querySelectorAll('.player-hand').forEach(ph => ph.style.opacity = '0'); 
             document.querySelectorAll('.player-hand p').forEach(p => p.remove());
+            if (discardPileContainer) discardPileContainer.innerHTML = ''; // Pulisci la pila durante il deal
 
             // Disabilita i pulsanti durante l'animazione di deal per prevenire interazioni premature
             if (callLiarBtn) callLiarBtn.disabled = true;
@@ -309,9 +337,11 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
         
         // Pulisci la mano del giocatore per visualizzare il messaggio di attesa
         const myHandUiDiv = myPlayerAreaDOM.querySelector('.player-hand');
-        if (myHandUiDiv) {
+        if (myHandUiDiv) { 
             myHandUiDiv.innerHTML = '<p class="awaiting-round">Attendendo nuovo round...</p>'; 
         }
+        if (discardPileContainer) discardPileContainer.innerHTML = ''; // Pulisci la pila alla fine del round
+        discardPileCardPositions = {}; // Resetta le posizioni per il prossimo round
     });
 
     socket.on('play-liar-sounds', () => {
@@ -325,6 +355,40 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
             }).catch(e => console.error("Errore riproduzione audio 'sigh' o 'revolver':", e));
         }
     });
+
+    // NUOVO: Funzione per calcolare l'angolo di rotazione della freccia di turno
+    function calculateTurnArrowRotation(playerAreaElement, gameBoardRect, centerRect) {
+        if (!playerAreaElement || !gameBoardRect || !centerRect) {
+            console.warn("Elementi per il calcolo della rotazione della freccia non trovati.");
+            return 0; // Ritorna un angolo di default
+        }
+
+        const playerRect = playerAreaElement.getBoundingClientRect();
+
+        // Calcola il centro del giocatore
+        const playerCenterX = playerRect.left + playerRect.width / 2;
+        const playerCenterY = playerRect.top + playerRect.height / 2;
+
+        // Calcola il centro dell'area centrale (o del tabellone di gioco come fallback)
+        const boardCenterX = centerRect.left + centerRect.width / 2;
+        const boardCenterY = centerRect.top + centerRect.height / 2;
+
+        // Calcola il vettore dal centro del tavolo al centro del giocatore
+        const deltaX = playerCenterX - boardCenterX;
+        const deltaY = playerCenterY - boardCenterY;
+
+        // Calcola l'angolo in radianti e poi converti in gradi
+        // Aggiungi 90 gradi per compensare l'orientamento di default di una freccia "verticale"
+        const angleRad = Math.atan2(deltaY, deltaX);
+        let angleDeg = angleRad * (180 / Math.PI) + 90; 
+
+        // Normalizza l'angolo tra 0 e 360
+        if (angleDeg < 0) {
+            angleDeg += 360;
+        }
+        return angleDeg;
+    }
+
 
     // --- FUNZIONI DI ANIMAZIONE ---
     function getPlayerHandDomElement(playerName, state) {
@@ -367,41 +431,93 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
         return Math.min(maxOverlap, cardWidth * 0.45); 
     }
 
+    // NUOVO: Funzione per calcolare lo scostamento delle carte per l'effetto "a ventaglio" per la mano del giocatore locale
+    function calculateFanPositions(numCards, cardWidth, cardHeight, handContainerWidth) {
+        if (numCards === 0) return [];
+        const positions = [];
+        const fanSpreadAngle = 30; // Angolo totale del ventaglio (es. 30 gradi)
+        const maxTranslationY = 15; // Massimo spostamento verso il basso al centro
+        const baseOverlap = cardWidth * 0.4; // Sovrapposizione base per tutte le carte
+
+        const totalWidthNeeded = (numCards * cardWidth) - ((numCards - 1) * baseOverlap);
+        // Calcola l'offset X iniziale per centrare il "ventaglio" all'interno del contenitore della mano
+        const initialXOffset = (handContainerWidth / 2) - (totalWidthNeeded / 2);
+
+        for (let i = 0; i < numCards; i++) {
+            // Calcola l'angolo di rotazione per ogni carta. Centrato su 0 gradi.
+            const angle = (numCards > 1) ? ((i / (numCards - 1)) - 0.5) * fanSpreadAngle : 0; 
+            const rotation = angle; 
+
+            // Calcolo del dislivello a parabola: le carte ai lati sono più basse
+            // normalizedPosition: 0 al centro del range, 0.5 ai bordi
+            const normalizedPosition = (numCards > 1) ? Math.abs((i / (numCards - 1)) - 0.5) : 0; 
+            const translateY = maxTranslationY * (1 - Math.cos(normalizedPosition * Math.PI)); // Funzione coseno per curva
+
+            // Posizionamento orizzontale con sovrapposizione
+            // L'offset X è la posizione base + lo scostamento per l'accavallamento
+            const translateX = initialXOffset + (i * (cardWidth - baseOverlap)); 
+            
+            positions.push({
+                x: translateX,
+                y: translateY,
+                rotate: rotation
+            });
+        }
+        return positions;
+    }
+
+    // NUOVO: Funzione per generare posizioni casuali per le carte nella pila degli scarti
+    function generateRandomDiscardPosition(cardWidth, cardHeight, pileContainerWidth, pileContainerHeight, existingCardsCount) {
+        // Range di scostamento X e Y dal centro della pila
+        const maxXOffset = (pileContainerWidth - cardWidth) / 2;
+        const maxYOffset = (pileContainerHeight - cardHeight) / 2;
+        const maxRotation = 10; // Rotazione massima in gradi (+/- 10 gradi)
+
+        // Genera posizioni e rotazioni leggermente casuali
+        // Moltiplica per un fattore (es. 0.5) per mantenere le carte più raggruppate
+        const x = (Math.random() * 2 - 1) * maxXOffset * 0.5; // Random tra -X e +X
+        const y = (Math.random() * 2 - 1) * maxYOffset * 0.5; // Random tra -Y e +Y
+        const rotate = (Math.random() * 2 - 1) * maxRotation; // Random tra -maxRotation e +maxRotation
+        const zIndex = existingCardsCount; // L'ultima carta aggiunta è sopra le altre
+
+        return { x, y, rotate, zIndex };
+    }
+
 
     function animateCardDealing(state, onAnimationsComplete) {
         console.log(`[ANIM] Inizio animazione distribuzione carte per round ${state.roundNumber}`);
-        if (!animationLayer || !gameBoard) {
-            console.error("[ANIM] Elemento gameBoard o layer animazione mancante!");
+        if (!animationLayer || !gameBoard) { 
+            console.error("[ANIM] Elemento gameBoard o layer animazione mancante!"); 
             if (onAnimationsComplete) onAnimationsComplete();
-            return;
+            return; 
         }
         animationLayer.innerHTML = ''; 
 
         const gameBoardRect = gameBoard.getBoundingClientRect();
         const centerAreaEl = document.querySelector('.center-area');
         let sourceX, sourceY;
-        if (centerAreaEl) {
-            const centerRect = centerAreaEl.getBoundingClientRect();
-            sourceX = centerRect.left + centerRect.width / 2 - gameBoardRect.left;
-            sourceY = centerRect.top + centerRect.height / 2 - gameBoardRect.top;
+        if (centerAreaEl) { 
+            const centerRect = centerAreaEl.getBoundingClientRect(); 
+            sourceX = centerRect.left + centerRect.width / 2 - gameBoardRect.left; 
+            sourceY = centerRect.top + centerRect.height / 2 - gameBoardRect.top; 
         } else { 
-            sourceX = gameBoardRect.width / 2;
-            sourceY = gameBoardRect.height / 2;
+            sourceX = gameBoardRect.width / 2; 
+            sourceY = gameBoardRect.height / 2; 
         }
 
         let animationsPending = 0;
         const maxCardsToDealThisRound = Math.max(...state.players.map(p => p.hand ? p.hand.length : 0));
         
-        if (audioCardDeal) {
-            audioCardDeal.currentTime = 0;
-            audioCardDeal.play().catch(e => console.warn("Errore riproduzione audio 'card deal':", e));
+        if (audioCardDeal) { 
+            audioCardDeal.currentTime = 0; 
+            audioCardDeal.play().catch(e => console.warn("Errore riproduzione audio 'card deal':", e)); 
         }
 
         const tempDivForStyle = document.createElement('div');
         tempDivForStyle.className = 'card'; 
         document.body.appendChild(tempDivForStyle);
-        const cardWidth = tempDivForStyle.offsetWidth;
-        const cardHeight = tempDivForStyle.offsetHeight;
+        const cardWidth = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-width'));
+        const cardHeight = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-height'));
         document.body.removeChild(tempDivForStyle);
 
         for (let cardIdx = 0; cardIdx < maxCardsToDealThisRound; cardIdx++) {
@@ -423,21 +539,32 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
                 animationLayer.appendChild(flyingCard);
 
                 const targetHandEl = getPlayerHandDomElement(player.name, state);
-                if (!targetHandEl) {
-                    console.warn(`[ANIM] Elemento mano DOM non trovato per ${player.name}. Saltando animazione carta.`);
-                    animationsPending--;
-                    if (flyingCard.parentNode) flyingCard.remove();
-                    return;
+                if (!targetHandEl) { 
+                    console.warn(`[ANIM] Elemento mano DOM non trovato per ${player.name}. Saltando animazione carta.`); 
+                    animationsPending--; 
+                    if (flyingCard.parentNode) flyingCard.remove(); 
+                    return; 
                 }
 
                 const handRect = targetHandEl.getBoundingClientRect();
-                const dynamicOverlap = calculateCardOverlap(numCardsThisPlayerHas, cardWidth, handRect.width);
                 
-                const totalVisibleWidthInHand = cardWidth + (numCardsThisPlayerHas - 1) * (cardWidth - dynamicOverlap);
-                const startXInHand = (handRect.width - totalVisibleWidthInHand) / 2; 
-                
-                const targetCardAbsX = handRect.left - gameBoardRect.left + startXInHand + (cardIdx * (cardWidth - dynamicOverlap));
-                const targetCardAbsY = handRect.top - gameBoardRect.top + (handRect.height / 2) - (cardHeight / 2);
+                // CALCOLO DELLE POSIZIONI FINALI IN BASE AL TIPO DI MANO (Ventaglio o Accavallamento Semplice)
+                let targetCardAbsX, targetCardAbsY, targetRotation;
+                if (player.name === myPlayerName) { // Giocatore locale: effetto ventaglio
+                    const positions = calculateFanPositions(numCardsThisPlayerHas, cardWidth, cardHeight, handRect.width);
+                    const cardPos = positions[cardIdx];
+                    targetCardAbsX = handRect.left - gameBoardRect.left + cardPos.x;
+                    targetCardAbsY = handRect.top - gameBoardRect.top + cardPos.y;
+                    targetRotation = cardPos.rotate;
+                    // Anche se le carte volanti hanno un z-index fisso qui, la logica di z-index per la mano statica è nel renderStaticGameBoard
+                } else { // Avversari: accavallamento semplice
+                    const dynamicOverlap = calculateCardOverlap(numCardsThisPlayerHas, cardWidth, handRect.width);
+                    const totalVisibleWidthInHand = cardWidth + (numCardsThisPlayerHas - 1) * (cardWidth - dynamicOverlap);
+                    const startXInHand = (handRect.width - totalVisibleWidthInHand) / 2; 
+                    targetCardAbsX = handRect.left - gameBoardRect.left + startXInHand + (cardIdx * (cardWidth - dynamicOverlap));
+                    targetCardAbsY = handRect.top - gameBoardRect.top + (handRect.height / 2) - (cardHeight / 2);
+                    targetRotation = 0; // Nessuna rotazione per gli avversari
+                }
                 
                 const translateX = targetCardAbsX - parseFloat(flyingCard.style.left); 
                 const translateY = targetCardAbsY - parseFloat(flyingCard.style.top); 
@@ -446,7 +573,7 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
 
                 setTimeout(() => {
                     void flyingCard.offsetWidth; 
-                    flyingCard.style.transform = `translate(${translateX}px, ${translateY}px) scale(1) rotate(${Math.random() * 6 - 3}deg)`;
+                    flyingCard.style.transform = `translate(${translateX}px, ${translateY}px) scale(1) rotate(${targetRotation}deg)`;
                     flyingCard.style.opacity = '1'; 
 
                     flyingCard.addEventListener('transitionend', function handler() {
@@ -461,48 +588,97 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
                 }, 50 + delay); 
             });
         }
-        if (animationsPending === 0 && onAnimationsComplete) {
-            console.log("[ANIM] Nessuna carta da animare, risoluzione immediata.");
-            onAnimationsComplete();
+        if (animationsPending === 0 && onAnimationsComplete) { 
+            console.log("[ANIM] Nessuna carta da animare, risoluzione immediata."); 
+            onAnimationsComplete(); 
         }
     }
 
+    // MODIFICATO: animatePlayedCard per far atterrare le carte casualmente sulla pila
     function animatePlayedCard(cardElement) {
         return new Promise(resolve => {
-            if (!animationLayer || !gameBoard || !discardPileDiv || !cardElement) {
-                console.error("[ANIM CARD] Elementi necessari per animazione carta giocata mancanti o cardElement nullo.");
+            // Nota: qui discardPileDiv è ancora usato come riferimento, ma in realtà
+            // le carte andranno nel discardPileContainer.
+            // Questa funzione si occupa dell'animazione dalla mano alla pila,
+            // il posizionamento finale è nel renderStaticGameBoard
+            if (!animationLayer || !gameBoard || !discardPileContainer || !cardElement) { 
+                console.error("[ANIM CARD] Elementi necessari per animazione carta giocata mancanti o cardElement nullo."); 
                 if (cardElement && cardElement.parentNode) cardElement.remove(); 
                 resolve(); 
-                return;
+                return; 
             }
 
             const flyingCard = cardElement.cloneNode(true);
             const cardRect = cardElement.getBoundingClientRect(); 
             const gameBoardRect = gameBoard.getBoundingClientRect();
-            const discardRect = discardPileDiv.getBoundingClientRect(); 
+            const discardPileContainerRect = discardPileContainer.getBoundingClientRect(); 
 
+            // Le carte sulla pila degli scarti sono sempre coperte e non sono più "selezionabili"
             flyingCard.classList.remove('static-in-hand', 'playable', 'selected'); 
-            flyingCard.classList.add('flying-card'); 
+            flyingCard.classList.add('flying-card', 'back'); 
             
+            // Imposta la posizione iniziale della carta volante (dalla mano del giocatore)
             flyingCard.style.left = `${cardRect.left - gameBoardRect.left}px`;
             flyingCard.style.top = `${cardRect.top - gameBoardRect.top}px`;
             flyingCard.style.opacity = '1';
             flyingCard.style.transform = 'scale(1)'; 
             animationLayer.appendChild(flyingCard);
             
-            cardElement.remove();
+            cardElement.remove(); // Rimuovi la carta originale dalla mano del giocatore
 
-            const targetX = discardRect.left + discardRect.width / 2 - gameBoardRect.left - (flyingCard.offsetWidth / 2);
-            const targetY = discardRect.top + discardRect.height / 2 - gameBoardRect.top - (flyingCard.offsetHeight / 2);
+            // Ottieni dimensioni della carta per il calcolo delle posizioni casuali
+            const cardWidth = parseFloat(getComputedStyle(flyingCard).getPropertyValue('--card-width'));
+            const cardHeight = parseFloat(getComputedStyle(flyingCard).getPropertyValue('--card-height'));
 
-            void flyingCard.offsetWidth; 
+            // Genera la posizione casuale per questa carta sulla pila degli scarti
+            const pilePositions = generateRandomDiscardPosition(
+                cardWidth, cardHeight, 
+                discardPileContainerRect.width, discardPileContainerRect.height, 
+                currentGameState.discardPile.length // Usa la lunghezza attuale della pila per il zIndex
+            );
+
+            // Calcola la posizione target assoluta rispetto al gameBoard per l'animazione
+            // pilePositions.x e y sono scostamenti dal centro di discardPileContainer
+            const targetX = discardPileContainerRect.left - gameBoardRect.left + pilePositions.x + (discardPileContainerRect.width / 2) - (cardWidth / 2);
+            const targetY = discardPileContainerRect.top - gameBoardRect.top + pilePositions.y + (discardPileContainerRect.height / 2) - (cardHeight / 2);
+
+            void flyingCard.offsetWidth; // Forza il reflow per applicare le posizioni iniziali prima della transizione
             
+            // Applica la transizione e le trasformazioni finali per l'animazione
             flyingCard.style.transition = 'transform 0.5s ease-out, opacity 0.5s ease-out';
-            flyingCard.style.transform = `translate(${targetX - parseFloat(flyingCard.style.left)}px, ${targetY - parseFloat(flyingCard.style.top)}px) scale(0.8) rotate(${Math.random() * 10 - 5}deg)`;
-            flyingCard.style.opacity = '0.7'; 
+            flyingCard.style.transform = `translate(${targetX - parseFloat(flyingCard.style.left)}px, ${targetY - parseFloat(flyingCard.style.top)}px) scale(1) rotate(${pilePositions.rotate}deg)`;
+            flyingCard.style.opacity = '1'; 
+            flyingCard.style.zIndex = pilePositions.zIndex; // Imposta lo z-index durante l'animazione
 
             flyingCard.addEventListener('transitionend', function handler() {
-                if (flyingCard.parentNode) flyingCard.remove();
+                // Dopo l'animazione, la carta si sposta dal layer di animazione alla pila degli scarti
+                if (discardPileContainer) {
+                    if (flyingCard.parentNode === animationLayer) { // Assicurati che sia ancora nel layer di animazione
+                         animationLayer.removeChild(flyingCard);
+                    }
+                    // Reimposta le proprietà per la visualizzazione statica nella pila
+                    // Le posizioni x/y qui sono relative al `discardPileContainer`
+                    flyingCard.style.position = 'absolute';
+                    flyingCard.style.left = `${pilePositions.x + (discardPileContainerRect.width / 2) - (cardWidth / 2)}px`;
+                    flyingCard.style.top = `${pilePositions.y + (discardPileContainerRect.height / 2) - (cardHeight / 2)}px`;
+                    flyingCard.style.transform = `rotate(${pilePositions.rotate}deg)`;
+                    flyingCard.style.transition = 'none'; // Nessuna transizione per future modifiche una volta che è statica
+                    flyingCard.style.opacity = '1'; // Mantiene l'opacità
+                    flyingCard.style.zIndex = pilePositions.zIndex;
+                    flyingCard.classList.remove('flying-card'); // Non è più una carta volante
+
+                    discardPileContainer.appendChild(flyingCard);
+                    
+                    // Memorizza la posizione generata per questa carta per i render futuri
+                    // NOTA: l'indice 'currentGameState.discardPile.length' sarà la dimensione della pila DOPO questa carta.
+                    // Quindi usiamo `currentGameState.discardPile.length - 1` per l'indice della carta appena aggiunta.
+                    const cardIdInPile = `${flyingCard.getAttribute('data-value')}_${currentGameState.discardPile.length -1}`; 
+                    discardPileCardPositions[cardIdInPile] = pilePositions;
+
+                } else {
+                    console.warn("[ANIM CARD] discardPileContainer non trovato alla fine dell'animazione.");
+                    if (flyingCard.parentNode) flyingCard.remove();
+                }
                 resolve(); 
                 this.removeEventListener('transitionend', handler);
             }, { once: true });
@@ -629,6 +805,51 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
             }
         }
 
+        // NUOVO: Gestione dell'indicatore di turno con la freccia
+        const turnArrow = document.getElementById('turn-arrow'); // Riferimento locale a turnArrow se non è globale
+        if (turnArrow) {
+            const playerInTurn = state.players.find(p => p.isTurn);
+            if (playerInTurn && !playerInTurn.isEliminated) {
+                // Trova l'elemento DOM del giocatore di turno
+                let playerTurnElement = null;
+                if (playerInTurn.name === myPlayerName) {
+                    playerTurnElement = myPlayerAreaDOM;
+                } else {
+                    const myIdx = state.players.findIndex(p => p.name === myPlayerName);
+                    const playerIdx = state.players.findIndex(p => p.name === playerInTurn.name);
+                    
+                    let relativeVisualSlotIndex = (playerIdx - myIdx + state.players.length) % state.players.length;
+
+                    if (state.players.length === 2) {
+                        playerTurnElement = opponentAreaDOMElements.slot1;
+                    } else if (state.players.length === 3) {
+                        if (relativeVisualSlotIndex === 1) playerTurnElement = opponentAreaDOMElements.slot1;
+                        if (relativeVisualSlotIndex === 2) playerTurnElement = opponentAreaDOMElements.slot2;
+                    } else if (state.players.length === 4) {
+                       // Assegna in base all'ordine degli slot visivi definiti
+                       if (relativeVisualSlotIndex === 1) playerTurnElement = opponentAreaDOMElements.slot1; // bottom-right
+                       if (relativeVisualSlotIndex === 2) playerTurnElement = opponentAreaDOMElements.slot2; // top-right
+                       if (relativeVisualSlotIndex === 3) playerTurnElement = opponentAreaDOMElements.slot3; // top-left
+                    }
+                }
+
+                if (playerTurnElement) {
+                    const gameBoardRect = gameBoard.getBoundingClientRect();
+                    // Usiamo center-area come punto di riferimento per il calcolo della rotazione
+                    const centerAreaEl = document.querySelector('.center-area'); 
+                    const centerRect = centerAreaEl ? centerAreaEl.getBoundingClientRect() : gameBoardRect; 
+
+                    const rotation = calculateTurnArrowRotation(playerTurnElement, gameBoardRect, centerRect);
+                    turnArrow.style.transform = `rotate(${rotation}deg)`;
+                    turnArrow.style.opacity = '1'; // Rendi visibile
+                } else {
+                    turnArrow.style.opacity = '0'; // Nascondi se non trovi l'elemento del giocatore di turno
+                }
+            } else {
+                turnArrow.style.opacity = '0'; // Nascondi se non c'è un giocatore di turno o è eliminato
+            }
+        }
+
 
         const me = state.players.find(p => p.name === myPlayerName);
         if (myPlayerAreaDOM) {
@@ -656,21 +877,36 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
                         const tempDivForStyle = document.createElement('div');
                         tempDivForStyle.className = 'card'; 
                         document.body.appendChild(tempDivForStyle);
-                        const cardWidth = tempDivForStyle.offsetWidth;
+                        const cardWidth = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-width'));
+                        const cardHeight = parseFloat(getComputedStyle(tempDivForStyle).getPropertyValue('--card-height'));
                         document.body.removeChild(tempDivForStyle);
                         
                         const handRect = myHandUiDiv.getBoundingClientRect();
-                        const dynamicOverlap = calculateCardOverlap(state.myHand.length, cardWidth, handRect.width);
                         
                         selectedCards = []; 
+
+                        // Calcola le posizioni per l'effetto ventaglio per la mano del giocatore locale
+                        const fanPositions = calculateFanPositions(state.myHand.length, cardWidth, cardHeight, handRect.width);
 
                         state.myHand.forEach((cardValue, cardIndex) => {
                             const cardDiv = document.createElement('div');
                             cardDiv.className = 'card static-in-hand';
-                            cardDiv.textContent = cardValue;
+                            cardDiv.textContent = cardValue; // Manteniamo il testo per aria-label o debug
+                            cardDiv.setAttribute('aria-label', `Carta: ${cardValue}`); // Accessibilità
+                            cardDiv.setAttribute('data-value', cardValue); // Usiamo un attributo data- per recuperare il valore
+
+                            // Aggiungi la classe CSS specifica per il valore della carta
+                            cardDiv.classList.add(cardValue.toLowerCase()); 
                             
-                            if (cardIndex > 0) {
-                                cardDiv.style.marginLeft = `-${dynamicOverlap}px`;
+                            // Applica le trasformazioni calcolate per l'effetto ventaglio
+                            if (fanPositions[cardIndex]) {
+                                const pos = fanPositions[cardIndex];
+                                cardDiv.style.position = 'absolute'; // Importante per posizionamento preciso
+                                cardDiv.style.left = `${pos.x}px`;
+                                cardDiv.style.top = `${pos.y}px`;
+                                cardDiv.style.transform = `rotate(${pos.rotate}deg)`;
+                                cardDiv.style.zIndex = cardIndex; // Z-index per sovrapposizione corretta
+                                cardDiv.style.transformOrigin = `center ${cardHeight * 0.8}px`; // Pivot più in basso per rotazione naturale
                             }
 
                             if (state.isMyTurn) { 
@@ -702,7 +938,13 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
             console.error("[RENDER STATIC] myPlayerAreaDOM non trovato!");
         }
 
-        if (discardPileDiv) {
+        // --- GESTIONE DELLA PILA DEGLI SCARTI ---
+        // Ho ripristinato il tuo HTML originale per discardPileDiv, ma ti avevo suggerito di dividerlo in discard-pile-container e discard-pile-info
+        // Se non hai ancora fatto quella modifica HTML, questa parte di codice userà ancora discardPileDiv come riferimento unico.
+        // Se hai fatto la modifica HTML, assicurati che i riferimenti (discardPileContainer, discardPileInfo, etc.) siano globali nel tuo JS.
+        if (discardPileDiv) { // Era il tuo discardPileDiv originale
+            // Questo codice non userà il nuovo effetto di pila dinamica senza l'HTML corretto
+            // e i riferimenti globali a discardPileContainer, discardPileInfo ecc.
             discardPileDiv.innerHTML = ''; 
             if (state.discardPile && state.discardPile.length > 0) {
                 discardPileDiv.classList.remove('empty-placeholder');
@@ -715,12 +957,20 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
                 labelSpan.textContent = `SCARTI (${state.discardPile.length})`;
                 discardPileDiv.appendChild(labelSpan);
 
-                if (lastPlayedCardDeclaredValue && lastPlayedCardDeclaredValue !== 'N/A') { 
-                    const valueSpan = document.createElement('span');
+                // Se non hai discardDeclaredValueSpan dal nuovo HTML, questa parte non farà nulla
+                // Aggiunto un fallback per il tuo HTML attuale
+                let valueSpan = discardPileDiv.querySelector('.declared-value');
+                if (!valueSpan) { // Crea se non esiste (per l'HTML originale)
+                    valueSpan = document.createElement('span');
                     valueSpan.className = 'declared-value';
-                    valueSpan.textContent = `(Dichiarato: ${lastPlayedCardDeclaredValue})`;
-                    discardPileDiv.appendChild(valueSpan);
                 }
+                if (lastPlayedCardDeclaredValue && lastPlayedCardDeclaredValue !== 'N/A') { 
+                    valueSpan.textContent = `(Dichiarato: ${lastPlayedCardDeclaredValue})`;
+                    valueSpan.style.display = 'block';
+                } else {
+                    valueSpan.style.display = 'none';
+                }
+                discardPileDiv.appendChild(valueSpan);
                 
                 discardPileDiv.style.opacity = '1'; 
             } else {
@@ -731,6 +981,11 @@ document.addEventListener('deviceready', () => { // Usiamo 'deviceready' per app
                 labelSpan.className = 'discard-label';
                 labelSpan.textContent = 'SCARTI (0)';
                 discardPileDiv.appendChild(labelSpan);
+
+                let valueSpan = discardPileDiv.querySelector('.declared-value');
+                if (valueSpan) { // Nascondi se esiste
+                    valueSpan.style.display = 'none';
+                }
 
                 discardPileDiv.style.opacity = '0.7';
             }
