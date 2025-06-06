@@ -1,3 +1,12 @@
+/* AGGIUNTO: Direttiva @font-face per caricare il font MedievalSharp localmente */
+@font-face {
+    font-family: 'MedievalSharp'; /* Questo è il nome che usi in var(--font-main) */
+    src: url('fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso e formato del tuo font locale */
+    font-weight: normal; 
+    font-style: normal;  
+    font-display: swap; /* Consigliato per le prestazioni di caricamento dei font */
+}
+
 /* Variabili CSS per colori e font */
 :root {
     --table-bg-color: #2a3d2c;
@@ -9,25 +18,27 @@
     --card-back-bg: #5a3a22;
     --card-width: 60px; /* Ancora più piccole per gli angoli */
     --card-height: 90px;
-    --font-main: 'MedievalSharp', cursive, sans-serif;
+    --font-main: 'MedievalSharp', cursive, sans-serif; /* Ora si basa sul font locale */
 }
 
 /* Stili essenziali di Cordova per il body e elementi globali */
-/* Mantenuti per compatibilità mobile e safe-area-inset */
+/* RIMOSSO/MODIFICATO: Cleanup per compatibilità mobile e safe-area-inset se non usi Cordova */
+/* Ho rimosso i selettori universali Cordova-specifici e le env() funzioni se non stai facendo un'app ibrida */
 * {
     -webkit-tap-highlight-color: rgba(0,0,0,0); /* Prevent tap highlight on mobile */
 }
 
 body {
-    -webkit-touch-callout: none;
-    -webkit-text-size-adjust: none;
-    -webkit-user-select: none;
+    /* RIMOSSO/MODIFICATO: Rimosse le proprietà Cordova-specifiche */
+    /* -webkit-touch-callout: none; */
+    /* -webkit-text-size-adjust: none; */
+    /* -webkit-user-select: none; */
     
     font-family: var(--font-main); 
     margin: 0;
     background-color: var(--table-bg-color);
-    /* Assicurati che il percorso dell'immagine di sfondo sia corretto! */
-    background-image: url('tavolo_non_pixelato.png'); 
+    /* Percorso corretto dell'immagine di sfondo */
+    background-image: url('immagini/tavolo_non_pixelato.png'); 
     background-size: cover; 
     background-position: center center;
     background-repeat: no-repeat; 
@@ -35,22 +46,21 @@ body {
     color: var(--text-color-on-dark-bg); 
     overflow: hidden; /* Evita scrollbar non desiderate */
 
-    /* Padding per evitare le "unsafe" areas dietro i notch (Cordova) */
-    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+    /* RIMOSSO: padding per safe-area-inset di Cordova, a meno che non lo usi specificamente in una PWA */
+    /* padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); */
     
-    width:100vw; /* Aggiunto per garantire che il body occupi l'intera larghezza del viewport */
-    height:100vh; /* Aggiunto per garantire che il body occupi l'intera altezza del viewport */
+    width:100vw; 
+    height:100vh; 
 }
 
 /* Stile per l'immagine della pistola durante l'animazione di volo */
 .flying-gun {
-    position: absolute; /* Fondamentale per posizionarla liberamente sullo schermo */
-    width: 90px; /* Dimensioni della pistola, puoi aggiustarle */
-    height: auto; /* Mantiene le proporzioni */
-    z-index: 600; /* Deve essere sopra a tutto durante l'animazione */
-    pointer-events: none; /* Non deve bloccare i click */
+    position: absolute; 
+    width: 90px; 
+    height: auto; 
+    z-index: 600; 
+    pointer-events: none; 
     transform-origin: center center;
-    /* Transizione fluida per quando cambiamo la sua posizione con 'transform' */
     transition: transform 0.7s cubic-bezier(0.5, 0, 0.5, 1), opacity 0.5s ease-out;
 }
 
@@ -70,20 +80,20 @@ body {
 }
 
 .shake-animation {
-    animation: shake-animation 0.5s; /* Applica l'animazione per 0.5 secondi */
+    animation: shake-animation 0.5s; 
 }
 
 #game-board {
     display: grid;
-    grid-template-columns: 200px 1fr 200px; /* Colonne per angoli sx, centro, angoli dx */
-    grid-template-rows: 180px 1fr 180px; /* Righe per angoli sup, centro, angoli inf */
+    grid-template-columns: 200px 1fr 200px; 
+    grid-template-rows: 180px 1fr 180px; 
     width: 100vw;
     height: 100vh;
     padding: 5px;
     box-sizing: border-box;
     position: relative;
-    align-items: center; /* Centra verticalmente il contenuto delle celle della griglia */
-    justify-items: center; /* Centra orizzontalmente il contenuto delle celle della griglia */
+    align-items: center; 
+    justify-items: center; 
 }
 
 #animation-layer { 
@@ -92,7 +102,7 @@ body {
     left: 0; 
     width: 100%; 
     height: 100%; 
-    pointer-events: none; /* Permette di cliccare gli elementi sottostanti */
+    pointer-events: none; 
     z-index: 500; 
 }
 
@@ -108,13 +118,13 @@ body {
     align-items: center;
     transform-origin: center center;
     transition: transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1), opacity 0.5s ease-out;
-    pointer-events: none; /* Non deve bloccare i click */
-    z-index: 550; /* Sopra ad altre carte statiche, ma sotto la pistola */
+    pointer-events: none; 
+    z-index: 550; 
 }
 
 .flying-card.back {
     background-color: var(--card-back-bg); 
-    /* Assicurati che il percorso dell'immagine del dorso sia corretto! */
+    /* Percorso corretto dell'immagine del dorso */
     background-image: url('immagini/card-back.png');
     background-size: cover; 
     color: transparent;
@@ -136,14 +146,17 @@ body {
     display: flex; 
     justify-content: center; 
     align-items: center; 
+    /* Ho notato che l'HTML precedente non aveva turn-indicator.
+       Se lo vuoi, ricontrolla il gioco.html che ti ho fornito 
+       per la pila degli scarti dinamica (che include anche turn-indicator). */
 } 
-#player-bottom-left { grid-area: 3 / 1; } /* TU */
+#player-bottom-left { grid-area: 3 / 1; } 
 #player-actions-panel { 
     grid-area: 3 / 2; 
     display: flex; 
     justify-content: center; 
     align-items: center; 
-    gap: 15px; /* Spazio tra i pulsanti */
+    gap: 15px; 
 }
 #player-bottom-right { grid-area: 3 / 3; }
 
@@ -176,16 +189,16 @@ body {
 #roulette-outcome-info {
     text-align: center;
     padding: 10px;
-    background-color: rgba(100,0,0,0.8); /* Sfondo rosso scuro per l'esito */
-    margin-top: 5px; /* Spazio dal challenge-info */
+    background-color: rgba(100,0,0,0.8); 
+    margin-top: 5px; 
     border-radius: 5px;
-    border: 1px solid #ff4444; /* Bordo rosso più acceso */
-    z-index: 250; /* Sopra ad altri elementi se necessario */
+    border: 1px solid #ff4444; 
+    z-index: 250; 
     color: white;
     font-size: 0.9em;
-    display: none; /* Inizialmente nascosto, controllato da JS */
+    display: none; 
 }
-#roulette-outcome-info b { color: #f8c946; /* Colore giallo per i nomi */ }
+#roulette-outcome-info b { color: #f8c946; }
 
 
 #discard-pile {
@@ -195,12 +208,12 @@ body {
     color: white; 
     font-size: 0.8rem; 
     opacity: 1;
-    display: flex; /* Centra il testo "SCARTI" */
-    flex-direction: column; /* Per testo e valore dichiarato */
+    display: flex; 
+    flex-direction: column; 
     justify-content: center;
     align-items: center;
     text-align: center;
-    box-sizing: border-box; /* Assicura che padding e bordo siano inclusi nella dimensione */
+    box-sizing: border-box; 
 }
 #discard-pile .discard-label {
     font-size: 0.8em;
@@ -225,7 +238,7 @@ body {
 
 .player-area {
     display: flex;
-    flex-direction: column; /* Default: info sopra, mano sotto */
+    flex-direction: column; 
     justify-content: center; 
     align-items: center;
     width: 100%; 
@@ -235,11 +248,11 @@ body {
 /* Orientamento info e mano per i giocatori negli angoli */
 #player-top-left .player-info, 
 #player-top-right .player-info { 
-    order: -1; /* Info prima della mano */ 
+    order: -1; 
 }
 #player-bottom-left .player-info, 
 #player-bottom-right .player-info { 
-    order: 1; /* Info dopo la mano */ 
+    order: 1; 
 }
 
 .player-info { 
@@ -257,10 +270,10 @@ body {
 .player-name { 
     display: block; 
     font-size: 0.85rem; 
-    white-space: nowrap; /* Previene il wrap del nome */
+    white-space: nowrap; 
     overflow: hidden;
-    text-overflow: ellipsis; /* Aggiunge "..." se il nome è troppo lungo */
-    max-width: 90%; /* Limita la larghezza del nome */
+    text-overflow: ellipsis; 
+    max-width: 90%; 
 }
 
 .player-hand {
@@ -271,7 +284,7 @@ body {
     padding: 2px;
     position: relative; 
     flex-wrap: nowrap; 
-    overflow: hidden; /* Nasconde carte che escono se la mano è troppo piena */
+    overflow: hidden; 
 }
 /* Stile per il messaggio di attesa del round */
 .player-hand.awaiting-round {
@@ -301,8 +314,8 @@ body {
     font-weight: bold; 
     user-select: none; 
     box-sizing: border-box;
-    flex-shrink: 0; /* Impedisce alle carte di ridursi */
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border 0.2s ease-out; /* Transizione per selezione */
+    flex-shrink: 0; 
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, border 0.2s ease-out; 
 }
 .card.back { /* Stile dorso */
     background-color: var(--card-back-bg); 
@@ -334,13 +347,13 @@ body {
 
 /* NUOVO: Stile per le carte selezionate */
 .player-hand .card.selected {
-    border: 3px solid var(--primary-color); /* Bordo più evidente */
-    box-shadow: 0 0 15px rgba(248, 201, 70, 0.8); /* Ombra più forte */
-    transform: translateY(-15px) scale(1.1); /* Sollevamento maggiore */
-    z-index: 20; /* Assicurati che sia sopra le altre carte non selezionate */
+    border: 3px solid var(--primary-color); 
+    box-shadow: 0 0 15px rgba(248, 201, 70, 0.8); 
+    transform: translateY(-15px) scale(1.1); 
+    z-index: 20; 
 }
 .player-hand .card.selected:hover {
-    transform: translateY(-20px) scale(1.15); /* Ancora di più all'hover */
+    transform: translateY(-20px) scale(1.15); 
 }
 
 
@@ -404,13 +417,13 @@ body {
     padding: 15px 25px;
     border-radius: 8px;
     z-index: 1000;
-    display: none; /* Inizialmente nascosto */
-    opacity: 0; /* Per transizioni di opacità */
-    transition: opacity 0.5s ease-out; /* Animazione dissolvenza */
-    max-width: 80%; /* Limita la larghezza su schermi più piccoli */
+    display: none; 
+    opacity: 0; 
+    transition: opacity 0.5s ease-out; 
+    max-width: 80%; 
     box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     font-size: 1.1rem;
 }
 #game-notifications strong {
-    color: var(--primary-color); /* Colore primario per evidenziare */
+    color: var(--primary-color); 
 }
