@@ -1,46 +1,43 @@
 /* AGGIUNTO: Direttiva @font-face per caricare il font MedievalSharp localmente */
 @font-face {
-    font-family: 'MedievalSharp'; /* Questo è il nome che usi in var(--font-main) */
-    src: url('fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso e formato del tuo font locale */
+    font-family: 'MedievalSharp'; 
+    src: url('../fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso corretto */
     font-weight: normal; 
     font-style: normal;  
-    font-display: swap; /* Consigliato per le prestazioni di caricamento dei font */
+    font-display: swap; 
 }
 
 /* Variabili CSS per colori e font */
 :root {
-    --primary-color: #f8c946; /* Giallo (es. bottoni, titoli) */
-    --secondary-color: #444; /* Grigio scuro (es. testo, sfondi modali) */
-    --text-color: #fff; /* Bianco (testo generale) */
-    --background-dark: rgba(0, 0, 0, 0.7); /* Sfondo scuro per overlay */
-    --background-light: #555; /* Grigio medio (es. player-spot) */
-    --button-hover-color: #ff9900; /* Arancione per hover bottoni */
-    --start-button-color: #9cbd4c; /* Verde oliva per start game */
+    --primary-color: #f8c946; 
+    --secondary-color: #444; 
+    --text-color: #fff; 
+    --background-dark: rgba(0, 0, 0, 0.7); 
+    --background-light: #555; 
+    --button-hover-color: #ff9900; 
+    --start-button-color: #9cbd4c; 
 }
 
 /* Stile generale del corpo */
 * {
-    -webkit-tap-highlight-color: rgba(0,0,0,0); /* Prevent tap highlight on mobile */
+    -webkit-tap-highlight-color: rgba(0,0,0,0); 
 }
 
 body {
-    /* RIMOSSO/MODIFICATO: Rimosse le proprietà Cordova-specifiche non necessarie per web */
-    /* -webkit-touch-callout: none; */
-    /* -webkit-text-size-adjust: none; */
-    /* -webkit-user-select: none; */
-    
-    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che 'MedievalSharp' sia il nome del font nel tuo @font-face */
+    /* Rimosse le proprietà Cordova-specifiche (user-select, touch-callout, text-size-adjust) */
+    font-family: 'MedievalSharp', cursive, sans-serif; 
     margin: 0;
-    padding: 0; /* Mantenuto padding 0, se serve ripristina env() se farai PWA */
+    padding: 0; 
     
     /* CORRETTO: Percorso immagine di sfondo */
-    background: url('immagini/tavolo_non_pixelato.png') no-repeat center center fixed;
+    background: url('../immagini/tavolo_non_pixelato.png') no-repeat center center fixed;
     background-size: cover;
     color: var(--text-color);
 
     width:100vw; 
     height:100vh; 
-    overflow: hidden; /* Aggiunto per coerenza, se il contenuto è sempre a schermo intero */
+    overflow: hidden; 
+    /* Rimosso padding env(safe-area-inset) se non fai PWA */
 }
 
 /* Titoli */
@@ -70,7 +67,7 @@ h3 {
     color: var(--secondary-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che il nome sia corretto */
+    font-family: 'MedievalSharp', cursive, sans-serif; 
     font-size: 1.2rem;
     margin: 10px;
     cursor: pointer;
@@ -101,7 +98,7 @@ h3 {
     color: var(--text-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che il nome sia corretto */
+    font-family: 'MedievalSharp', cursive, sans-serif; 
     font-size: 1em;
     cursor: not-allowed;
     opacity: 0.6;
@@ -128,7 +125,7 @@ h3 {
     height: 100%;
     background-color: var(--background-dark);
     
-    display: flex; /* Mantenuto flex per centratura */
+    display: flex; 
     justify-content: center; 
     align-items: center;    
     
