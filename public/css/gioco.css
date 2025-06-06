@@ -118,7 +118,7 @@ body {
 .flying-card.back {
     background-color: var(--card-back-bg); 
     /* CORRETTO: Percorso immagine del dorso */
-    background-image: url('../immagini/card-back.png');
+    background-image: url('../img/card-back.png');
     background-size: cover; 
     color: transparent;
 }
@@ -359,16 +359,16 @@ body {
     overflow: hidden; 
 }
 /* Stili specifici per le immagini del fronte delle carte */
-.card.re { background-image: url('../immagini/king.png'); }
-.card.regina { background-image: url('../immagini/queen.png'); }
-.card.asso { background-image: url('../immagini/ace.png'); }
-.card.jolly { background-image: url('../immagini/joker.png'); }
+.card.re { background-image: url('../img/king.png'); }
+.card.regina { background-image: url('../img/queen.png'); }
+.card.asso { background-image: url('../img/ace.png'); }
+.card.jolly { background-image: url('../img/joker.png'); }
 
 /* Stile dorso */
 .card.back { 
     background-color: var(--card-back-bg); 
     /* CORRETTO: Percorso immagine del dorso */
-    background-image: url('../immagini/card-back.png');
+    background-image: url('../img/card-back.png');
     background-size: cover; 
     background-position: center; 
     color: transparent;
@@ -380,7 +380,7 @@ body {
     position: absolute; 
     transition: none; /* Disabilita la transizione per i movimenti casuali */
     box-shadow: 2px 2px 5px rgba(0,0,0,0.3); 
-    background-image: url('../immagini/card-back.png'); /* Le carte scartate sono sempre coperte */
+    background-image: url('../img/card-back.png'); /* Le carte scartate sono sempre coperte */
     background-size: cover;
     background-position: center;
     background-color: var(--card-back-bg);
