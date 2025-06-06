@@ -764,7 +764,7 @@ process.on('unhandledRejection', (reason, promise) => {
 console.log("Checkpoint 13: Gestori errori globali di processo definiti");
 
 // --- Avvio Server ---
-const serverHttp = http.createServer(app);
+const serverHttp = http.createServer(app); // QUESTO DEVE ESSERE QUI E SOLO QUI
 serverHttp.on('error', (error) => {
     if (error.syscall !== 'listen') {
         console.error("Errore serverHttp non gestito:", error);
