@@ -6,7 +6,7 @@ const app = express();
 // Modifica: la porta deve essere dinamica per Render
 const port = process.env.PORT || 3000;
 const path = require('path');
-const http = require('http'); // Keep this require
+const http = require('http');
 const { Server } = require('socket.io');
 console.log("Checkpoint 1: Moduli richiesti caricati");
 
@@ -84,6 +84,8 @@ function sendGameStateUpdate(lobby) {
                 challenge: gameState.challenge,
                 rouletteOutcome: gameState.rouletteOutcome
             };
+            // `io` is defined later, so this function must be called after `io` is initialized
+            // This is handled by the structure of the game logic and API calls
             io.to(p_loop.socketId).emit('game-state-update', personalizedState);
         } else {
             console.warn(`[WARN] Socket ID mancante per ${p_loop.name} in lobby ${gameState.lobbyCode}. Impossibile inviare aggiornamento.`);
@@ -206,6 +208,9 @@ app.post('/chiudi-lobby', (req, res) => {
         const lobby = lobbies[codice];
         if (lobby) {
             console.log(`[LOBBY] Chiusura forzata lobby ${codice}.`);
+            // `io` is defined later, so this is okay if io is used within a function that is called later.
+            // But if this block is executed before `io` is defined, it would cause an error.
+            // This API route will be called after server starts, so it's fine.
             io.to(codice).emit('lobby-closed');
             delete lobbies[codice];
             io.socketsLeave(codice);
@@ -230,6 +235,7 @@ app.post('/unisciti-lobby', (req, res) => {
 
         lobby.players.push(player);
         console.log(`[LOBBY] ${player} si è unito alla lobby ${codice}`);
+        // `io` is defined later, but this code is part of an API route that is called after server starts.
         io.to(codice).emit('update-players', lobby.players);
         res.json({ success: true, players: lobby.players });
     } catch (error) { console.error(`[ERROR] Errore in /unisciti-lobby:`, error.stack); res.status(500).json({ success: false, error: 'Errore interno del server' }); }
@@ -242,17 +248,18 @@ app.post('/lascia-lobby', (req, res) => {
         if (!lobby || !lobby.players) return res.status(404).json({ success: false, error: MSG.LOBBY_NOT_FOUND });
 
         const initialPlayerCount = lobby.players.length;
-        lobby.players = lobby.players.filter(p => p !== player);
+        lobby.players = lobby.players ? lobby.players.filter(p => p !== player) : [];
+
+        if (lobby.playerSockets && lobby.playerSockets[player]) {
+            const disconnectedSocketId = lobby.playerSockets[player];
+            delete lobby.playerSockets[player];
+            delete socketToLobbyMap[disconnectedSocketId];
+            // `io` is defined later, but this code is part of an API route that is called after server starts.
+            io.sockets.sockets.get(disconnectedSocketId)?.leave(codice);
+        }
 
         if (lobby.players.length < initialPlayerCount) {
             console.log(`[LOBBY] ${player} ha lasciato la lobby ${codice} tramite API.`);
-
-            if (lobby.playerSockets && lobby.playerSockets[player]) {
-                const disconnectedSocketId = lobby.playerSockets[player];
-                delete lobby.playerSockets[player];
-                delete socketToLobbyMap[disconnectedSocketId];
-                io.sockets.sockets.get(disconnectedSocketId)?.leave(codice);
-            }
 
             if (lobby.players.length === 0) {
                 console.log(`[LOBBY] Lobby ${codice} chiusa perché vuota dopo abbandono API.`);
@@ -308,6 +315,7 @@ app.post('/avvia-partita', (req, res) => {
         };
 
         console.log(`[GAME] Partita a 4 giocatori impostata per la lobby ${codice}. In attesa che i giocatori siano pronti.`);
+        // `io` is defined later, but this code is part of an API route that is called after server starts.
         io.to(codice).emit('game-started', codice);
         res.json({ success: true });
     } catch (error) { console.error(`[ERROR] Errore in /avvia-partita:`, error.stack); res.status(500).json({ success: false, error: 'Errore interno del server' }); }
@@ -336,11 +344,18 @@ app.get('/', (req, res) => {
 });
 console.log("Checkpoint 8.1: Rotta per '/' definita");
 
+---
+
+**Crucial Change Starts Here**
+
+```javascript
+// --- Avvio Server ---
+// Declare serverHttp HERE, before it's used by Socket.IO
+const serverHttp = http.createServer(app);
+console.log("Checkpoint 9: Server HTTP creato"); // This checkpoint moves here
 
 // --- Logica Socket.IO ---
-// REMOVE THIS LINE: const serverHttp = http.createServer(app);
-// console.log("Checkpoint 9: Server HTTP creato"); // No longer needed as part of Checkpoint 9
-
+// `io` can now access `serverHttp` because it's declared above
 const io = new Server(serverHttp, {
     cors: {
         origin: "*",
@@ -763,8 +778,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 console.log("Checkpoint 13: Gestori errori globali di processo definiti");
 
-// --- Avvio Server ---
-const serverHttp = http.createServer(app); // THIS IS THE ONLY DECLARATION FOR serverHttp
+// The serverHttp.on('error') and serverHttp.listen() logic remains at the end
 serverHttp.on('error', (error) => {
     if (error.syscall !== 'listen') {
         console.error("Errore serverHttp non gestito:", error);
