@@ -1,42 +1,42 @@
 /* AGGIUNTO: Direttiva @font-face per caricare il font MedievalSharp localmente */
 @font-face {
-    font-family: 'MedievalSharp'; 
+    font-family: 'MedievalSharp';
     src: url('../fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso corretto */
-    font-weight: normal; 
-    font-style: normal;  
-    font-display: swap; 
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
 }
 
 /* Variabili CSS per colori e font */
 :root {
-    --primary-color: #f8c946; 
-    --secondary-color: #444; 
-    --text-color: #fff; 
-    --background-dark: rgba(0, 0, 0, 0.7); 
-    --background-light: #555; 
-    --button-hover-color: #ff9900; 
-    --start-button-color: #9cbd4c; 
+    --primary-color: #f8c946;
+    --secondary-color: #444;
+    --text-color: #fff;
+    --background-dark: rgba(0, 0, 0, 0.7);
+    --background-light: #555;
+    --button-hover-color: #ff9900;
+    --start-button-color: #9cbd4c;
 }
 
 /* Stile generale del corpo */
 * {
-    -webkit-tap-highlight-color: rgba(0,0,0,0); 
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
 }
 
 body {
     /* Rimosse le proprietà Cordova-specifiche (user-select, touch-callout, text-size-adjust) */
-    font-family: 'MedievalSharp', cursive, sans-serif; 
+    font-family: 'MedievalSharp', cursive, sans-serif;
     margin: 0;
-    padding: 0; 
-    
+    padding: 0;
+
     /* CORRETTO: Percorso immagine di sfondo */
-     background: url('../immagini/sfondo_lobby.png') no-repeat center center fixed; /* MODIFICATO QUI */
+    background: url('../immagini/sfondo_lobby.png') no-repeat center center fixed;
     background-size: cover;
     color: var(--text-color);
 
-    width:100vw; 
-    height:100vh; 
-    overflow: hidden; 
+    width:100vw;
+    height:100vh;
+    overflow: hidden;
     /* Rimosso padding env(safe-area-inset) se non fai PWA */
 }
 
@@ -51,12 +51,12 @@ h1.title {
 h2 {
     font-size: 2rem;
     margin-bottom: 20px;
-    color: var(--primary-color); 
+    color: var(--primary-color);
 }
 
 h3 {
     font-size: 1.5rem;
-    color: var(--primary-color); 
+    color: var(--primary-color);
 }
 
 /* Stile comune per i bottoni principali */
@@ -67,7 +67,7 @@ h3 {
     color: var(--secondary-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif; 
+    font-family: 'MedievalSharp', cursive, sans-serif;
     font-size: 1.2rem;
     margin: 10px;
     cursor: pointer;
@@ -98,7 +98,7 @@ h3 {
     color: var(--text-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif; 
+    font-family: 'MedievalSharp', cursive, sans-serif;
     font-size: 1em;
     cursor: not-allowed;
     opacity: 0.6;
@@ -113,7 +113,7 @@ h3 {
 }
 
 #start-game-btn.enabled:hover {
-    filter: brightness(85%); 
+    filter: brightness(85%);
 }
 
 /* Stile per i modali */
@@ -124,20 +124,20 @@ h3 {
     width: 100%;
     height: 100%;
     background-color: var(--background-dark);
-    
-    display: flex; 
-    justify-content: center; 
-    align-items: center;    
-    
-    z-index: 1000; 
 
-    visibility: hidden; 
-    opacity: 0;       
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 1000;
+
+    visibility: hidden;
+    opacity: 0;
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 /* Stile per quando il modale è attivo (visibile) */
-.modal.is-active { 
+.modal.is-active {
     visibility: visible;
     opacity: 1;
 }
@@ -298,8 +298,59 @@ h3 {
 
 /* Modal per aggiungersi alla lobby - input specifico */
 #join-lobby-modal .lobby-code input {
-    background-color: #333;
+    background-color: #333; /* This specific override might still be desired, but consider if it truly aligns with `--secondary-color` or `--background-light` for consistency */
 }
+
+/* Styles for the Name Input Modal elements (Moved and consolidated for better organization) */
+/* Assuming the name input modal itself has an ID like 'name-modal' for targeted styling */
+#name-modal .modal-content {
+    /* These properties are usually inherited from .modal-content, but ensuring them here is fine */
+    background-color: var(--secondary-color);
+    color: var(--primary-color); /* For any labels or text directly in the content area */
+}
+
+#name-input {
+    font-family: 'MedievalSharp', cursive, sans-serif;
+    font-size: 1.5rem;
+    padding: 12px 10px;
+    line-height: 1.5;
+    height: 50px;
+    box-sizing: border-box;
+    border-radius: 5px;
+    background-color: var(--secondary-color); /* Matches other inputs and modal background */
+    color: var(--text-color);
+    border: 2px solid var(--primary-color);
+    width: 100%;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+    margin-bottom: 20px;
+}
+
+#name-input:focus {
+    border-color: var(--button-hover-color);
+}
+
+#confirm-name-btn {
+    background-color: var(--primary-color);
+    color: var(--secondary-color); /* Keeping secondary color for text on primary background button */
+    border: none;
+    padding: 10px 20px;
+    font-family: 'MedievalSharp', cursive, sans-serif;
+    font-size: 1.2rem;
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    width: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+#confirm-name-btn:hover {
+    background-color: var(--button-hover-color);
+    color: var(--text-color); /* Transition to text-color for hover contrast */
+}
+
 
 /* Tab Contenuti (Regole) */
 .tab-content {
@@ -313,55 +364,7 @@ h3 {
     color: var(--text-color);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
-/* AGGIUNTO: Stile per l'input del nome nel modal */
-#name-input {
-    font-family: 'MedievalSharp', cursive, sans-serif;
-    font-size: 1.5rem; /* O la dimensione che preferisci per gli input */
-    padding: 12px 10px;
-    line-height: 1.5;
-    height: 50px; /* Consistente con altri input testuali */
-    box-sizing: border-box;
-    border-radius: 5px;
-    background-color: var(--secondary-color); /* Stesso colore di sfondo dei modal-content */
-    color: var(--text-color); /* Stesso colore del testo */
-    border: 2px solid var(--primary-color); /* Bordo primario */
-    width: 100%;
-    text-align: center; /* Centra il testo all'interno dell'input */
-    outline: none;
-    transition: border-color 0.3s ease, background-color 0.3s ease; /* Aggiungi transizione per hover/focus */
-    margin-bottom: 20px; /* Spazio sotto l'input */
-}
 
-#name-input:focus {
-    border-color: var(--button-hover-color); /* Colore del bordo al focus */
-}
-
-/* AGGIUNTO: Stile per il bottone di conferma del nome nel modal */
-#confirm-name-btn {
-    background-color: var(--primary-color); /* Colore principale per lo sfondo */
-    color: var(--secondary-color); /* Colore secondario per il testo */
-    border: none;
-    padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif;
-    font-size: 1.2rem; /* Coerente con gli altri bottoni */
-    cursor: pointer;
-    border-radius: 5px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    width: auto; /* Permette al bottone di adattarsi al contenuto */
-    display: block; /* O display: inline-block; se preferisci */
-    margin: 0 auto; /* Centra il bottone se è un blocco */
-}
-
-#confirm-name-btn:hover {
-    background-color: var(--button-hover-color); /* Colore al passaggio del mouse */
-    color: var(--text-color); /* O var(--secondary-color) a seconda del contrasto desiderato */
-}
-
-/* Potresti anche voler assicurarti che il modal content del nome sia coerente, anche se sembra già a posto */
-#name-modal .modal-content {
-    background-color: var(--secondary-color);
-    color: var(--primary-color); /* Per il titolo/etichette interne */
-}
 .tab-content h2 {
     font-size: 2rem;
     color: var(--primary-color);
