@@ -98,7 +98,7 @@ function sendGameStateUpdate(lobby) {
 function startNewRound(lobby) {
     console.log("[DEBUG startNewRound] Inizio funzione startNewRound");
     if (!lobby || !lobby.gameState) { 
-        const lobbyCodeForError = lobby ? (lobby.gameState ? lobby.gameState.lobbyCode : 'LOBBY_CODE_NON_TROVATO_IN_GAMESTATE') : 'LOBBY_NON_ESISTENTE';
+        const lobbyCodeForError = lobby ? (lobby.gameState ? lobby.gameState.lobbyCode : 'N/A') : 'N/A';
         console.error(`[ERROR] Tentativo di startNewRound su lobby non valida o senza gameState: ${lobbyCodeForError}`);
         return; 
     }
@@ -610,7 +610,7 @@ io.on('connection', (socket) => {
                     const winner = activePlayers.length === 1 ? activePlayers[0].name : null;
                     console.log(`[GAME OVER] Partita ${lobbyCode} terminata. Vincitore: ${winner || 'Nessuno (o pareggio)'}`);
                     io.to(lobbyCode).emit('game-over', { winner: winner, reason: winner ? 'Ultimo giocatore rimasto!' : 'Nessun vincitore.' });
-                    delete lobbies[lobbyCode];
+                    delete lobbies[codice];
                     return; 
                 }
 
