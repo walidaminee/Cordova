@@ -1,3 +1,12 @@
+/* AGGIUNTO: Direttiva @font-face per caricare il font MedievalSharp localmente */
+@font-face {
+    font-family: 'MedievalSharp'; /* Questo è il nome che usi in var(--font-main) */
+    src: url('fonts/MedievalSharp-Regular.ttf') format('truetype'); /* Percorso e formato del tuo font locale */
+    font-weight: normal; 
+    font-style: normal;  
+    font-display: swap; /* Consigliato per le prestazioni di caricamento dei font */
+}
+
 /* Variabili CSS per colori e font */
 :root {
     --primary-color: #f8c946; /* Giallo (es. bottoni, titoli) */
@@ -10,13 +19,28 @@
 }
 
 /* Stile generale del corpo */
+* {
+    -webkit-tap-highlight-color: rgba(0,0,0,0); /* Prevent tap highlight on mobile */
+}
+
 body {
-    font-family: 'MedievalSharp', cursive, sans-serif;
+    /* RIMOSSO/MODIFICATO: Rimosse le proprietà Cordova-specifiche non necessarie per web */
+    /* -webkit-touch-callout: none; */
+    /* -webkit-text-size-adjust: none; */
+    /* -webkit-user-select: none; */
+    
+    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che 'MedievalSharp' sia il nome del font nel tuo @font-face */
     margin: 0;
-    padding: 0;
-    background: url('20250531_1853_Bar Medievale Realistico_simple_compose_01jwkm26dqenr8zq8b73yjxhdv.png') no-repeat center center fixed;
+    padding: 0; /* Mantenuto padding 0, se serve ripristina env() se farai PWA */
+    
+    /* CORRETTO: Percorso immagine di sfondo */
+    background: url('immagini/tavolo_non_pixelato.png') no-repeat center center fixed;
     background-size: cover;
     color: var(--text-color);
+
+    width:100vw; 
+    height:100vh; 
+    overflow: hidden; /* Aggiunto per coerenza, se il contenuto è sempre a schermo intero */
 }
 
 /* Titoli */
@@ -30,12 +54,12 @@ h1.title {
 h2 {
     font-size: 2rem;
     margin-bottom: 20px;
-    color: var(--primary-color); /* Assicura che H2 sia sempre giallo */
+    color: var(--primary-color); 
 }
 
 h3 {
     font-size: 1.5rem;
-    color: var(--primary-color); /* Assicura che H3 sia sempre giallo */
+    color: var(--primary-color); 
 }
 
 /* Stile comune per i bottoni principali */
@@ -46,7 +70,7 @@ h3 {
     color: var(--secondary-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive, sans-serif;
+    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che il nome sia corretto */
     font-size: 1.2rem;
     margin: 10px;
     cursor: pointer;
@@ -77,7 +101,7 @@ h3 {
     color: var(--text-color);
     border: none;
     padding: 10px 20px;
-    font-family: 'MedievalSharp', cursive;
+    font-family: 'MedievalSharp', cursive, sans-serif; /* Assicurati che il nome sia corretto */
     font-size: 1em;
     cursor: not-allowed;
     opacity: 0.6;
@@ -92,14 +116,11 @@ h3 {
 }
 
 #start-game-btn.enabled:hover {
-    filter: brightness(85%); /* Scurisce leggermente per l'hover, senza pre-processore */
+    filter: brightness(85%); 
 }
 
 /* Stile per i modali */
 .modal {
-    /* La proprietà display: none; è gestita da JavaScript. */
-    /* Quando il modale è visibile, il JavaScript imposta display: flex; */
-    
     position: fixed;
     top: 0;
     left: 0;
@@ -107,26 +128,19 @@ h3 {
     height: 100%;
     background-color: var(--background-dark);
     
-    /* Assicura che sia sempre un flex container quando visibile */
-    display: flex; /* <-- Lasciamo SEMPRE display: flex; qui */
+    display: flex; /* Mantenuto flex per centratura */
+    justify-content: center; 
+    align-items: center;    
     
-    /* Centra il contenuto del modale sia orizzontalmente che verticalmente */
-    justify-content: center; /* Centratura orizzontale */
-    align-items: center;     /* Centratura verticale */
-    
-    z-index: 1000; /* Assicura che i modali siano sopra tutto il resto */
+    z-index: 1000; 
 
-    /* Aggiungiamo questa proprietà per nascondere/mostrare con transizione,
-       ma il tuo JS imposta display: none/flex, quindi potresti volerlo togliere
-       se preferisci la gestione solo via JS.
-       Se vuoi una transizione fluida, dovrai gestire visibility/opacity con JS. */
-    visibility: hidden; /* <-- Inizialmente nascosto senza occupare spazio */
-    opacity: 0;         /* <-- Inizialmente trasparente */
+    visibility: hidden; 
+    opacity: 0;       
     transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 /* Stile per quando il modale è attivo (visibile) */
-.modal.is-active { /* <-- Questa classe verrà aggiunta/rimossa da JavaScript */
+.modal.is-active { 
     visibility: visible;
     opacity: 1;
 }
@@ -142,7 +156,6 @@ h3 {
     font-size: 1.2rem;
     position: relative;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    /* Puoi aggiungere un max-height e overflow-y: auto; qui se i modali diventano troppo lunghi */
 }
 
 /* Elemento di chiusura dei modali */
