@@ -313,7 +313,55 @@ h3 {
     color: var(--text-color);
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
+/* AGGIUNTO: Stile per l'input del nome nel modal */
+#name-input {
+    font-family: 'MedievalSharp', cursive, sans-serif;
+    font-size: 1.5rem; /* O la dimensione che preferisci per gli input */
+    padding: 12px 10px;
+    line-height: 1.5;
+    height: 50px; /* Consistente con altri input testuali */
+    box-sizing: border-box;
+    border-radius: 5px;
+    background-color: var(--secondary-color); /* Stesso colore di sfondo dei modal-content */
+    color: var(--text-color); /* Stesso colore del testo */
+    border: 2px solid var(--primary-color); /* Bordo primario */
+    width: 100%;
+    text-align: center; /* Centra il testo all'interno dell'input */
+    outline: none;
+    transition: border-color 0.3s ease, background-color 0.3s ease; /* Aggiungi transizione per hover/focus */
+    margin-bottom: 20px; /* Spazio sotto l'input */
+}
 
+#name-input:focus {
+    border-color: var(--button-hover-color); /* Colore del bordo al focus */
+}
+
+/* AGGIUNTO: Stile per il bottone di conferma del nome nel modal */
+#confirm-name-btn {
+    background-color: var(--primary-color); /* Colore principale per lo sfondo */
+    color: var(--secondary-color); /* Colore secondario per il testo */
+    border: none;
+    padding: 10px 20px;
+    font-family: 'MedievalSharp', cursive, sans-serif;
+    font-size: 1.2rem; /* Coerente con gli altri bottoni */
+    cursor: pointer;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    width: auto; /* Permette al bottone di adattarsi al contenuto */
+    display: block; /* O display: inline-block; se preferisci */
+    margin: 0 auto; /* Centra il bottone se è un blocco */
+}
+
+#confirm-name-btn:hover {
+    background-color: var(--button-hover-color); /* Colore al passaggio del mouse */
+    color: var(--text-color); /* O var(--secondary-color) a seconda del contrasto desiderato */
+}
+
+/* Potresti anche voler assicurarti che il modal content del nome sia coerente, anche se sembra già a posto */
+#name-modal .modal-content {
+    background-color: var(--secondary-color);
+    color: var(--primary-color); /* Per il titolo/etichette interne */
+}
 .tab-content h2 {
     font-size: 2rem;
     color: var(--primary-color);
