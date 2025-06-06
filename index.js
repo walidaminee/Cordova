@@ -3,7 +3,6 @@ console.log("Il server sta partendo... Checkpoint 0: Inizio File");
 const express = require('express');
 const cors = require('cors');
 const app = express();
-// Modifica: la porta deve essere dinamica per Render
 const port = process.env.PORT || 3000; 
 const path = require('path');
 const http = require('http');
@@ -254,7 +253,7 @@ app.post('/lascia-lobby', (req, res) => {
                     if (lobby.players.length > 0) {
                         const newOwnerName = lobby.players[0];
                         lobby.ownerSocketId = lobby.playerSockets[newOwnerName] || null;
-                        console.log(`[LOBBY] Nuovo proprietario per ${codice}: <span class="math-inline">\{newOwnerName\} \(</span>{lobby.ownerSocketId}).`);
+                        console.log(`[LOBBY] Nuovo proprietario per ${codice}: ${newOwnerName} (${lobby.ownerSocketId}).`);
                     }
                 }
                 io.to(codice).emit('update-players', lobby.players);
@@ -363,11 +362,11 @@ io.on('connection', (socket) => {
             if (lobby.ownerSocketId === null || !Object.values(lobby.playerSockets).includes(lobby.ownerSocketId)) {
                 if (lobby.players && lobby.players[0] === player) {
                     lobby.ownerSocketId = socket.id; 
-                    console.log(`[LOBBY] Proprietario <span class="math-inline">\{player\} \(</span>{socket.id}) registrato per lobby ${codice}.`); 
+                    console.log(`[LOBBY] Proprietario ${player} (${socket.id}) registrato per lobby ${codice}.`); 
                 }
             }
             
-            console.log(`[LOBBY] <span class="math-inline">\{player\} \(</span>{socket.id}) si è unito alla stanza Socket.IO ${codice}. Benvenuto!`);
+            console.log(`[LOBBY] ${player} (${socket.id}) si è unito alla stanza Socket.IO ${codice}. Benvenuto!`);
             io.to(codice).emit('update-players', lobby.players); 
         } catch (error) { console.error(`[ERROR] in 'join-lobby':`, error.stack); }
     });
@@ -382,7 +381,7 @@ io.on('connection', (socket) => {
             const playerInGame = lobby.gameState.players.find(p => p.name === playerName);
             if (playerInGame) { 
                 playerInGame.socketId = socket.id;
-                console.log(`[GAME] Socket ID aggiornato per <span class="math-inline">\{playerName\} \(</span>{socket.id}) in lobby ${lobbyCode}`); 
+                console.log(`[GAME] Socket ID aggiornato per ${playerName} (${socket.id}) in lobby ${lobbyCode}`); 
             } else { 
                 console.error(`[ERRORE] Giocatore ${playerName} non trovato nel gameState della lobby ${lobbyCode} (player-ready).`); 
                 socket.emit('error-message', MSG.PLAYER_NOT_FOUND_IN_GAME);
@@ -392,7 +391,7 @@ io.on('connection', (socket) => {
                 lobby.gameState.readyPlayers.push(playerName); 
             }
             
-            console.log(`[GAME] Giocatori pronti per ${lobbyCode}: <span class="math-inline">\{lobby\.gameState\.readyPlayers\.join\(', '\)\} \(</span>{lobby.gameState.readyPlayers.length}/${lobby.gameState.players.length})`);
+            console.log(`[GAME] Giocatori pronti per ${lobbyCode}: ${lobby.gameState.readyPlayers.join(', ')} (${lobby.gameState.readyPlayers.length}/${lobby.gameState.players.length})`);
 
             if (lobby.gameState.readyPlayers.length === lobby.gameState.players.length && lobby.gameState.players.length > 0) {
                 console.log(`[GAME] Condizione soddisfatta per avviare il round in ${lobbyCode}. Chiamo startNewRound.`);
@@ -417,7 +416,7 @@ io.on('connection', (socket) => {
             
             const player = gameState.players[currentPlayerTurnIndex];
             if (player.socketId !== socket.id || !player.isTurn) { 
-                console.log(`[GAME] Mossa non valida da socket ${socket.id}. Giocatore di turno <span class="math-inline">\{player\.name\}\(</span>{player.socketId}). Turno ${player.isTurn}.`); 
+                console.log(`[GAME] Mossa non valida da socket ${socket.id}. Giocatore di turno ${player.name}(${player.socketId}). Turno ${player.isTurn}.`); 
                 return; 
             }
 
@@ -441,7 +440,7 @@ io.on('connection', (socket) => {
             
             const implicitDeclaredValue = gameState.tableType; 
 
-            console.log(`[GAME] <span class="math-inline">\{player\.name\} ha giocato \[</span>{cards.join(', ')}] (dichiarato come ${implicitDeclaredValue}) dalla lobby ${lobbyCode}`);
+            console.log(`[GAME] ${player.name} ha giocato [${cards.join(', ')}] (dichiarato come ${implicitDeclaredValue}) dalla lobby ${lobbyCode}`);
             if(!gameState.discardPile) gameState.discardPile = [];
             gameState.discardPile.push(...cards);
 
@@ -495,7 +494,7 @@ io.on('connection', (socket) => {
             const callingPlayer = gameState.players.find(p => p.socketId === socket.id);
 
             if (!callingPlayer || !callingPlayer.isTurn) { 
-                console.log(`[GAME] <span class="math-inline">\{callingPlayer ? callingPlayer\.name \: 'Socket sconosciuto'\} \(</span>{socket.id}) ha provato a chiamare BUGIA! fuori turno o non valido.`); 
+                console.log(`[GAME] ${callingPlayer ? callingPlayer.name : 'Socket sconosciuto'} (${socket.id}) ha provato a chiamare BUGIA! fuori turno o non valido.`); 
                 return; 
             }
             if (!gameState.lastPlay || !gameState.lastPlay.actualCards || gameState.lastPlay.actualCards.length === 0) { 
@@ -557,7 +556,7 @@ io.on('connection', (socket) => {
             const sendingPlayer = gameState.players.find(p => p.socketId === socket.id);
 
             if (!sendingPlayer || sendingPlayer.name !== playerPlayingRRName) {
-                console.log(`[GAME RR] <span class="math-inline">\{sendingPlayer ? sendingPlayer\.name \: 'Socket sconosciuto'\} \(</span>{socket.id}) ha provato a giocare la roulette per ${playerPlayingRRName}, ma non era designato.`);
+                console.log(`[GAME RR] ${sendingPlayer ? sendingPlayer.name : 'Socket sconosciuto'} (${socket.id}) ha provato a giocare la roulette per ${playerPlayingRRName}, ma non era designato.`);
                 return; 
             }
 
@@ -634,7 +633,7 @@ io.on('connection', (socket) => {
                 if (safetyBreakTurn >= totalPlayersRR) {
                     console.warn(`[GAME RR] Impossibile trovare un giocatore attivo per il prossimo round in ${lobbyCode}. Potenziale stato di blocco.`);
                     io.to(lobbyCode).emit('game-over', { winner: null, reason: 'Nessun giocatore attivo rimanente.' });
-                    delete lobbies[lobbyCode];
+                    delete lobbies[codice];
                     return;
                 }
 
@@ -663,7 +662,7 @@ io.on('connection', (socket) => {
             const lobby = lobbies[lobbyCode]; 
     
             delete socketToLobbyMap[disconnectingSocketId]; 
-            console.log(`[SOCKET.IO] Rimosso <span class="math-inline">\{playerName\} \(</span>{disconnectingSocketId}) da socketToLobbyMap.`);
+            console.log(`[SOCKET.IO] Rimosso ${playerName} (${disconnectingSocketId}) da socketToLobbyMap.`);
     
             if (!lobby) {
                 console.log(`[DISCONNECT] Lobby ${lobbyCode} per ${playerName} (da map) non trovata. Probabilmente già eliminata.`);
@@ -680,19 +679,14 @@ io.on('connection', (socket) => {
                     delete lobby.playerSockets[playerName];
                 }
 
-                if (lobby.ownerSocketId === disconnectingSocketId || lobby.players.length === 0) {
-                    console.log(`[LOBBY] Chiusura lobby ${lobbyCode} (owner disconnesso o lobby vuota in waiting).`);
-                    io.to(lobbyCode).emit('lobby-closed'); 
-                    delete lobbies[codice];
-                } else if (lobby.players.length < initialPlayerCount) { 
-                    if (lobby.ownerSocketId === disconnectingSocketId && lobby.players.length > 0) {
+                if (lobby.ownerSocketId === null || !Object.values(lobby.playerSockets).includes(lobby.ownerSocketId)) {
+                    if (lobby.players.length > 0) {
                         const newOwnerName = lobby.players[0];
                         lobby.ownerSocketId = lobby.playerSockets[newOwnerName] || null;
-                        console.log(`[LOBBY] Nuovo proprietario per ${lobbyCode}: <span class="math-inline">\{newOwnerName\} \(</span>{lobby.ownerSocketId}).`);
+                        console.log(`[LOBBY] Nuovo proprietario per ${lobbyCode}: ${newOwnerName} (${lobby.ownerSocketId}).`);
                     }
-                    io.to(codice).emit('update-players', lobby.players);
                 }
-                res.json({ success: true });
+                io.to(codice).emit('update-players', lobby.players);
             } else if (lobby.status === 'in-game') {
                 const playerInGame = lobby.gameState.players.find(p => p.name === playerName);
                 if (playerInGame) {
@@ -746,42 +740,42 @@ console.log("Checkpoint 11: Handler per io.on('connection') definito");
 
 // --- Gestori di Errori Globali ---
 app.use((err, req, res, next) => {
-    console.error("[EXPRESS ERROR STACK]:", err.stack);
-    res.status(500).send('Errore interno del server Express!');
+    console.error("[EXPRESS ERROR STACK]:", err.stack);
+    res.status(500).send('Errore interno del server Express!');
 });
 console.log("Checkpoint 12: Gestore errori Express definito");
 
 process.on('uncaughtException', (err, origin) => {
-    console.error(`ERRORE GLOBALE NON CATTURATO! Origin: ${origin}`, err.stack || err);
+    console.error(`ERRORE GLOBALE NON CATTURATO! Origin: ${origin}`, err.stack || err);
 });
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('PROMISE REJECTION NON GESTITA!:', reason, 'Promise:', promise);
+    console.error('PROMISE REJECTION NON GESTITA!:', reason, 'Promise:', promise);
 });
 console.log("Checkpoint 13: Gestori errori globali di processo definiti");
 
 // --- Avvio Server ---
 serverHttp.on('error', (error) => {
-    if (error.syscall !== 'listen') {
-        console.error("Errore serverHttp non gestito:", error);
-        throw error;
-    }
-    const bind = typeof port === 'string' ? 'Pipe ' + port : 'Porta ' + port;
-    switch (error.code) {
-        case 'EACCES':
-            console.error(`ERRORE SERVER: ${bind} richiede privilegi elevati.`);
-            process.exit(1);
-            break;
-        case 'EADDRINUSE':
-            console.error(`ERRORE SERVER: ${bind} è già in uso! Assicurati che non ci siano altri server (o una vecchia istanza di questo server) attivi sulla stessa porta.`);
-            process.exit(1);
-            break;
-        default:
-            console.error("Errore serverHttp non riconosciuto:", error);
-            throw error;
-    }
+    if (error.syscall !== 'listen') {
+        console.error("Errore serverHttp non gestito:", error);
+        throw error;
+    }
+    const bind = typeof port === 'string' ? 'Pipe ' + port : 'Porta ' + port;
+    switch (error.code) {
+        case 'EACCES':
+            console.error(`ERRORE SERVER: ${bind} richiede privilegi elevati.`);
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(`ERRORE SERVER: ${bind} è già in uso! Assicurati che non ci siano altri server (o una vecchia istanza di questo server) attivi sulla stessa porta.`);
+            process.exit(1);
+            break;
+        default:
+            console.error("Errore serverHttp non riconosciuto:", error);
+            throw error;
+    }
 });
 
 serverHttp.listen(port, () => {
-    console.log(`[INFO] Server avviato su http://localhost:${port} - Checkpoint 14: Server in ascolto!`);
+    console.log(`[INFO] Server avviato su http://localhost:${port} - Checkpoint 14: Server in ascolto!`);
 });
 console.log("Checkpoint 15: Chiamata a serverHttp.listen() effettuata");
