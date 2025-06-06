@@ -3,6 +3,7 @@ console.log("Il server sta partendo... Checkpoint 0: Inizio File");
 const express = require('express');
 const cors = require('cors');
 const app = express();
+// Modifica: la porta deve essere dinamica per Render
 const port = process.env.PORT || 3000; 
 const path = require('path');
 const http = require('http');
@@ -53,6 +54,11 @@ function shuffleDeck(deck) {
     return deck;
 }
 
+/**
+ * Invia l'aggiornamento dello stato del gioco a tutti i giocatori della lobby.
+ * Ogni giocatore riceve uno stato personalizzato (mano visibile solo a se stesso).
+ * @param {object} lobby - L'oggetto lobby con il gameState aggiornato.
+ */
 function sendGameStateUpdate(lobby) {
     if (!lobby || !lobby.gameState || !lobby.gameState.players) { 
         console.error(`[ERROR sendGameStateUpdate] Lobby o gameState non validi. Lobby Code: ${lobby ? (lobby.gameState ? lobby.gameState.lobbyCode : 'N/A') : 'N/A'}`);
@@ -85,6 +91,10 @@ function sendGameStateUpdate(lobby) {
     });
 }
 
+/**
+ * Avvia un nuovo round del gioco, distribuendo carte e impostando il tipo di tavolo.
+ * @param {object} lobby - L'oggetto lobby.
+ */
 function startNewRound(lobby) {
     console.log("[DEBUG startNewRound] Inizio funzione startNewRound");
     if (!lobby || !lobby.gameState) { 
@@ -754,6 +764,7 @@ process.on('unhandledRejection', (reason, promise) => {
 console.log("Checkpoint 13: Gestori errori globali di processo definiti");
 
 // --- Avvio Server ---
+const serverHttp = http.createServer(app);
 serverHttp.on('error', (error) => {
     if (error.syscall !== 'listen') {
         console.error("Errore serverHttp non gestito:", error);
