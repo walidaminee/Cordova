@@ -30,7 +30,7 @@ body {
     padding: 0; 
     
     /* CORRETTO: Percorso immagine di sfondo */
-    background: url('../immagini/tavolo_non_pixelato.png') no-repeat center center fixed;
+     background: url('../immagini/sfondo_lobby.png') no-repeat center center fixed; /* MODIFICATO QUI */
     background-size: cover;
     color: var(--text-color);
 
