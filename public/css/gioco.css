@@ -359,10 +359,10 @@ body {
     overflow: hidden; 
 }
 /* Stili specifici per le immagini del fronte delle carte */
-.card.re { background-image: url('../img/king.png'); }
-.card.regina { background-image: url('../img/queen.png'); }
-.card.asso { background-image: url('../img/ace.png'); }
-.card.jolly { background-image: url('../img/joker.png'); }
+.card.re { background-image: url('../img/King.png'); }
+.card.regina { background-image: url('../img/Queen.png'); }
+.card.asso { background-image: url('../img/Ace.png'); }
+.card.jolly { background-image: url('../img/Joker.jpg'); }
 
 /* Stile dorso */
 .card.back { 
